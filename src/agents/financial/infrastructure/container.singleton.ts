@@ -1,8 +1,14 @@
 import { FinancialAgentContainer } from './FinancialAgentContainer'
 
+function requireEnv(name: string): string {
+  const value = process.env[name]
+  if (!value) throw new Error(`Variável de ambiente obrigatória não definida: ${name}`)
+  return value
+}
+
 function createContainer(): FinancialAgentContainer {
-  const anthropicApiKey  = process.env.ANTHROPIC_API_KEY  ?? ''
-  const financialSecret  = process.env.FINANCIAL_SECRET   ?? ''
+  const anthropicApiKey  = requireEnv('ANTHROPIC_API_KEY')
+  const financialSecret  = requireEnv('FINANCIAL_SECRET')
   const financialBaseUrl = process.env.FINANCIAL_BASE_URL ?? 'https://financial-adapter.flysakura.com'
 
   const twilioAccountSid = process.env.TWILIO_ACCOUNT_SID
