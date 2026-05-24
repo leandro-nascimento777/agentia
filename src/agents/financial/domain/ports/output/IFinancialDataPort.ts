@@ -48,28 +48,46 @@ export interface BilheteFilter extends ReportFilter {
   groupBy?: string
 }
 
-export interface IFinancialDataPort {
-  checkHealth(): Promise<unknown>
+// ─── Sub-interfaces focadas (ISP) ──────────────────────────────────────────
 
+export interface IHealthPort {
+  checkHealth(): Promise<unknown>
+}
+
+export interface ISchemaPort {
   getSicaTables(): Promise<unknown>
   getSicaTableColumns(table: string): Promise<unknown>
   querySicaTable(table: string, filter?: TableQueryFilter): Promise<unknown>
-
   getSigotTables(): Promise<unknown>
   getSigotTableColumns(table: string): Promise<unknown>
   querySigotTable(table: string, filter?: TableQueryFilter): Promise<unknown>
+}
 
+export interface IAirReportPort {
   getAirReportFilial(filter?: AirReportFilter): Promise<unknown>
   getAirReportRepresentante(filter?: AirReportFilter): Promise<unknown>
   getAirReportGeral(filter?: AirReportFilter): Promise<unknown>
+}
 
+export interface INonAirReportPort {
   getNonAirSicaFilial(filter?: NonAirReportFilter): Promise<unknown>
   getNonAirSicaRepresentante(filter?: NonAirReportFilter): Promise<unknown>
   getNonAirSigotFilial(filter?: NonAirReportFilter): Promise<unknown>
   getNonAirSigotRepresentante(filter?: NonAirReportFilter): Promise<unknown>
+}
 
+export interface ICadastroPort {
   getCompanhiaAerea(filter?: CompanhiaAereaFilter): Promise<unknown>
   getEmpresaCadastro(filter?: EmpresaFilter): Promise<unknown>
   getExecutivoGestor(filter?: ExecutivoFilter): Promise<unknown>
   getBilheteEmailAgencia(filter?: BilheteFilter): Promise<unknown>
 }
+
+// ─── Interface composta — implementada pelo adapter HTTP ───────────────────
+
+export interface IFinancialDataPort
+  extends IHealthPort,
+    ISchemaPort,
+    IAirReportPort,
+    INonAirReportPort,
+    ICadastroPort {}
