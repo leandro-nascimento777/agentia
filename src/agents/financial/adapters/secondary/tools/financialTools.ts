@@ -111,7 +111,7 @@ export const FINANCIAL_TOOLS: Anthropic.Tool[] = [
     }
   },
   {
-    name: 'report_non_air_sica_repres',
+    name: 'report_non_air_sica_representante',
     description: 'Relatório BASE NON-AIR SICA — Representante.',
     input_schema: {
       type: 'object',
@@ -139,7 +139,7 @@ export const FINANCIAL_TOOLS: Anthropic.Tool[] = [
     }
   },
   {
-    name: 'report_non_air_sigot_repres',
+    name: 'report_non_air_sigot_representante',
     description: 'Relatório BASE NON-AIR SIGOT — Representante. Dados a partir de 2026.',
     input_schema: {
       type: 'object',
