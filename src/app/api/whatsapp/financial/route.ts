@@ -1,7 +1,28 @@
+import twilio from 'twilio'
 import { container } from '@/agents/financial/infrastructure/container.singleton'
+
+async function validateTwilioSignature(req: Request): Promise<boolean> {
+  const authToken = process.env.TWILIO_AUTH_TOKEN
+  if (!authToken) return false
+
+  const signature  = req.headers.get('x-twilio-signature') ?? ''
+  const url        = req.url
+  const formData   = await req.clone().formData()
+
+  const params: Record<string, string> = {}
+  formData.forEach((value, key) => { params[key] = value.toString() })
+
+  return twilio.validateRequest(authToken, signature, url, params)
+}
 
 export async function POST(req: Request) {
   try {
+    const isValid = await validateTwilioSignature(req)
+    if (!isValid) {
+      console.warn('[financial-webhook] rejected: invalid Twilio signature')
+      return new Response('Forbidden', { status: 403 })
+    }
+
     const formData = await req.formData()
     const body     = (formData.get('Body') as string | null)?.trim()
     const from     = formData.get('From') as string | null
@@ -19,7 +40,6 @@ export async function POST(req: Request) {
       console.error('[financial-webhook] error:', err)
     )
 
-    // Retorna TwiML vazio imediatamente
     return new Response(
       '<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
       { headers: { 'Content-Type': 'text/xml' } }
