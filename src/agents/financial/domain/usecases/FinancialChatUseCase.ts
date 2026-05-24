@@ -2,8 +2,11 @@ import type { IFinancialChatPort } from '../ports/input/IFinancialChatPort'
 import type { IFinancialDataPort } from '../ports/output/IFinancialDataPort'
 import type { IAgentLLMPort, ToolExecutor } from '../ports/output/IAgentLLMPort'
 import type { IConversationHistoryPort } from '../ports/output/IConversationHistoryPort'
+import type { IUserPreferencesPort } from '../ports/output/IUserPreferencesPort'
 import { createMessage } from '../entities/ConversationMessage'
 import { FINANCIAL_WHATSAPP_PROMPT } from '../prompts'
+
+const SET_BRIEFING_MARKER = /\[SET_BRIEFING_TIME:(\d{2}:\d{2})\]/
 
 export class FinancialChatUseCase implements IFinancialChatPort {
   private static readonly MAX_HISTORY_TURNS = 4
@@ -12,22 +15,41 @@ export class FinancialChatUseCase implements IFinancialChatPort {
   constructor(
     private readonly llm: IAgentLLMPort,
     private readonly dataService: IFinancialDataPort,
-    private readonly history: IConversationHistoryPort
+    private readonly history: IConversationHistoryPort,
+    private readonly phoneNumber?: string,
+    private readonly preferences?: IUserPreferencesPort
   ) {}
 
   async chat(userMessage: string): Promise<string> {
+    const briefingTime = this.phoneNumber
+      ? this.preferences?.get(this.phoneNumber)?.briefingTime
+      : undefined
+
     const reply = await this.llm.chat(
-      FINANCIAL_WHATSAPP_PROMPT(),
+      FINANCIAL_WHATSAPP_PROMPT(briefingTime),
       this.history.getHistory(),
       userMessage,
       this.buildToolExecutor()
     )
 
+    const cleaned = this.processMarkers(reply)
+
     this.history.append(createMessage('user', userMessage))
-    this.history.append(createMessage('assistant', reply))
+    this.history.append(createMessage('assistant', cleaned))
     this.history.truncate(FinancialChatUseCase.MAX_HISTORY_TURNS)
 
-    return reply
+    return cleaned
+  }
+
+  // Detecta [SET_BRIEFING_TIME:HH:MM] na resposta, persiste a preferência e remove o marcador
+  private processMarkers(reply: string): string {
+    const match = reply.match(SET_BRIEFING_MARKER)
+    if (match && this.phoneNumber && this.preferences) {
+      const newTime = match[1]
+      this.preferences.set(this.phoneNumber, { briefingTime: newTime })
+      console.log(`[DIMAS] horário do briefing atualizado para ${newTime} (${this.phoneNumber})`)
+    }
+    return reply.replace(SET_BRIEFING_MARKER, '').trim()
   }
 
   private buildToolExecutor(): ToolExecutor {

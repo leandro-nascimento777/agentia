@@ -4,8 +4,10 @@ import { FinancialChatUseCase } from '../domain/usecases/FinancialChatUseCase'
 import { FinancialAdapterHttpClient } from '../adapters/secondary/FinancialAdapterHttpClient'
 import { ClaudeAgentAdapter } from '../adapters/secondary/ClaudeAgentAdapter'
 import { InMemoryConversationRepository } from '../adapters/secondary/InMemoryConversationRepository'
+import { InMemoryUserPreferencesRepository } from '../adapters/secondary/InMemoryUserPreferencesRepository'
 import { FinancialAgentCliAdapter } from '../adapters/primary/FinancialAgentCliAdapter'
 import { TwilioWhatsAppAdapter } from '../adapters/primary/TwilioWhatsAppAdapter'
+import { BriefingScheduler } from './BriefingScheduler'
 import type { IAgentLLMPort } from '../domain/ports/output/IAgentLLMPort'
 import type { IFinancialDataPort } from '../domain/ports/output/IFinancialDataPort'
 
@@ -25,6 +27,7 @@ export interface FinancialAgentConfig {
 export class FinancialAgentContainer {
   readonly cli: FinancialAgentCliAdapter
   readonly whatsapp?: TwilioWhatsAppAdapter
+  readonly scheduler?: BriefingScheduler
 
   private readonly llm: IAgentLLMPort
   private readonly dataService: IFinancialDataPort
@@ -33,17 +36,27 @@ export class FinancialAgentContainer {
     this.llm         = new ClaudeAgentAdapter(new Anthropic({ apiKey: config.anthropicApiKey }))
     this.dataService = new FinancialAdapterHttpClient(config.financialBaseUrl, config.financialSecret)
 
+    const preferences = new InMemoryUserPreferencesRepository()
+
     this.cli = new FinancialAgentCliAdapter(
       new FinancialChatUseCase(this.llm, this.dataService, new InMemoryConversationRepository())
     )
 
     if (config.twilio) {
       const twilioClient = twilio(config.twilio.accountSid, config.twilio.authToken)
+
       this.whatsapp = new TwilioWhatsAppAdapter(
         twilioClient,
         config.twilio.fromNumber,
         this.llm,
-        this.dataService
+        this.dataService,
+        preferences
+      )
+
+      this.scheduler = new BriefingScheduler(
+        preferences,
+        this.dataService,
+        (to, body) => this.whatsapp!.sendDirect(to, body)
       )
     }
   }

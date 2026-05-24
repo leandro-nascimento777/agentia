@@ -1,103 +1,79 @@
-# AgentIA — DIMAS: Assistente Executivo da Sakura
+# DIMAS — Assistente Financeiro da Sakura
 
-Assistente executivo corporativo B2B que opera dentro do WhatsApp, integrado aos sistemas internos da Sakura Consolidadora (SICA, SIGOT, Doc4Sign). Evolução do AgentIA financeiro para um produto completo de IA executiva.
+Assistente financeiro pessoal que opera via WhatsApp e traz um panorama completo das vendas da Sakura Consolidadora todo dia, no horário que o usuário escolher.
 
-## O que é o DIMAS
+## O que o DIMAS faz hoje
 
-- Envia **briefings automáticos** 3x ao dia (manhã, meio-dia, noite) com volume de vendas, alertas e agenda
-- Responde perguntas sobre agências em tempo real (faturamento, crédito, inadimplência)
-- Alerta imediatamente quando agências entram na lista Sofia ou estouram o crédito
-- Assina contratos via Doc4Sign direto no WhatsApp *(Fase 2)*
-- Envia mensagens em nome do executivo para terceiros, identificando-se como assistente *(Fase 2)*
-- Múltiplos DIMAS conectados por hierarquia, comunicando-se via fila *(Fase 3)*
-- Produto para agências de viagem: atendimento a cliente final fora do horário *(Fase 4)*
+**Panorama diário automático** (horário configurável pelo próprio usuário):
+- Quanto foi vendido ontem — Aéreo e Terrestre separados, e total
+- Acumulado do mês até hoje
+- Comparativo com o mesmo período do ano passado
+- Novas agências cadastradas no mês
+
+**Consultas sob demanda via WhatsApp:**
+- Vendas por período, por tipo (Aéreo / Terrestre)
+- Cadastro de empresas, bloqueio de crédito
+- Executivos e gestores
+- Bilhetes emitidos por agência
+
+**Configuração de horário:**
+Wagner pode mudar o horário do briefing a qualquer momento: _"muda para 7h"_ e o DIMAS confirma e atualiza.
 
 ## Stack
 
 | Camada | Tecnologia |
 |---|---|
 | Framework | Next.js 15 + TypeScript |
-| LLM | Claude Sonnet 4.6 (Anthropic) |
+| LLM | Claude Haiku 4.5 (Anthropic) |
 | WhatsApp | Twilio |
-| Queue / Scheduler | BullMQ + Redis |
-| Banco de dados | Supabase (PostgreSQL) |
-| Dados operacionais | SICA + SIGOT |
-| Contratos | Doc4Sign *(Fase 2)* |
+| Scheduler | node-cron |
+| Dados | SICA + SIGOT (API HTTP) |
 | Arquitetura | Hexagonal (ports & adapters) |
 
-## Estrutura do Projeto
+## Estrutura
 
 ```
 src/
-├── agents/
-│   ├── financial/          # Agente financeiro atual (DIMAS v1)
-│   │   ├── domain/         # Entities, ports, use cases
-│   │   ├── adapters/       # Claude, SICA/SIGOT, Twilio, memória
-│   │   └── infrastructure/ # Container de dependências
-│   └── dimas/              # DIMAS executivo completo (em desenvolvimento)
-├── app/
-│   └── api/whatsapp/       # Webhooks Twilio
-└── domain/                 # Domínio de roteiros de viagem (legado)
-
-SPEC.md     # Especificação funcional completa (o que o sistema faz)
-SDD.md      # Design técnico completo (como a arquitetura funciona)
+└── agents/
+    └── financial/
+        ├── domain/
+        │   ├── entities/          # ConversationMessage
+        │   ├── ports/             # IFinancialDataPort (e sub-interfaces), IUserPreferencesPort
+        │   ├── prompts/           # System prompts centralizados
+        │   └── usecases/          # FinancialChatUseCase, BuildMorningBriefingUseCase
+        ├── adapters/
+        │   ├── primary/           # TwilioWhatsAppAdapter, FinancialAgentCliAdapter
+        │   └── secondary/         # ClaudeAgentAdapter, FinancialAdapterHttpClient,
+        │                          # InMemoryConversationRepository, InMemoryUserPreferencesRepository
+        └── infrastructure/        # FinancialAgentContainer, BriefingScheduler, container.singleton
 ```
 
-## Documentação
-
-- **[SPEC.md](SPEC.md)** — Requisitos funcionais, regras de negócio, roadmap de fases
-- **[SDD.md](SDD.md)** — Arquitetura, modelo de dados, tools, segurança, deploy
-
-## Rodando Localmente
+## Rodando localmente
 
 ```bash
-# Instalar dependências
 npm install
-
-# Configurar variáveis de ambiente
 cp .env.example .env.local
-# edite .env.local com suas chaves
-
-# Iniciar servidor
+# preencha as variáveis
 npm run dev
+```
 
-# Rodar agente financeiro no terminal
+Para usar o agente no terminal (sem WhatsApp):
+```bash
 npm run agent:financial
 ```
 
-## Variáveis de Ambiente
+## Variáveis de ambiente
 
-Copie `.env.example` para `.env.local` e preencha:
-
-| Variável | Descrição |
-|---|---|
-| `ANTHROPIC_API_KEY` | Chave da API Claude (Anthropic) |
-| `TWILIO_ACCOUNT_SID` | SID da conta Twilio |
-| `TWILIO_AUTH_TOKEN` | Token de autenticação Twilio |
-| `TWILIO_WHATSAPP_NUMBER` | Número WhatsApp Twilio (`whatsapp:+55...`) |
-| `SUPABASE_URL` | URL do projeto Supabase |
-| `SUPABASE_SERVICE_ROLE_KEY` | Chave service role do Supabase |
-| `REDIS_URL` | URL do Redis para BullMQ |
-| `SICA_API_URL` | URL da API SICA |
-| `SICA_API_KEY` | Chave de acesso SICA |
-| `SIGOT_API_URL` | URL da API SIGOT |
-| `SIGOT_API_KEY` | Chave de acesso SIGOT |
-
-## Roadmap
-
-| Fase | Escopo | Status |
+| Variável | Obrigatória | Descrição |
 |---|---|---|
-| **MVP (Fase 1)** | Briefing automático, consulta de agências, alertas Sofia/crédito | Em desenvolvimento |
-| **Fase 2** | Doc4Sign no WhatsApp, delegação em nome do executivo | Planejado |
-| **Fase 3** | Multi-DIMAS, protocolo entre agentes, hierarquia BullMQ | Planejado |
-| **Fase 4** | DIMAS Agência — produto para agências clientes | Planejado |
+| `ANTHROPIC_API_KEY` | Sim | Chave da API Claude |
+| `FINANCIAL_SECRET` | Sim | Secret de acesso à API SICA/SIGOT |
+| `FINANCIAL_BASE_URL` | Não | URL base da API (padrão: flysakura.com) |
+| `TWILIO_ACCOUNT_SID` | Para WhatsApp | SID da conta Twilio |
+| `TWILIO_AUTH_TOKEN` | Para WhatsApp | Token Twilio |
+| `TWILIO_WHATSAPP_FROM` | Para WhatsApp | Número remetente (`+14155238886`) |
 
-## Custo Operacional (MVP — 5 usuários)
+## Documentação técnica
 
-| Item | Custo/mês |
-|---|---|
-| Railway (app + Redis) | ~$55 |
-| Supabase Pro | ~$25 |
-| Twilio WhatsApp | ~$50 |
-| Claude API (Sonnet) | ~$95 |
-| **Total** | **~$225 / R$ 1.300** |
+- **[SPEC.md](SPEC.md)** — especificação funcional do roadmap DIMAS completo
+- **[SDD.md](SDD.md)** — design técnico detalhado

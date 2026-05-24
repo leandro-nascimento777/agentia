@@ -1,6 +1,7 @@
 import { TwilioWhatsAppAdapter } from '../TwilioWhatsAppAdapter'
 import type { IAgentLLMPort } from '../../../domain/ports/output/IAgentLLMPort'
 import type { IFinancialDataPort } from '../../../domain/ports/output/IFinancialDataPort'
+import { InMemoryUserPreferencesRepository } from '../../secondary/InMemoryUserPreferencesRepository'
 
 function makeLLM(reply = 'resposta'): jest.Mocked<IAgentLLMPort> {
   return { chat: jest.fn().mockResolvedValue(reply) }
@@ -31,7 +32,9 @@ describe('TwilioWhatsAppAdapter', () => {
   beforeEach(() => {
     twilioClient = makeTwilioClient()
     llm = makeLLM()
-    adapter = new TwilioWhatsAppAdapter(twilioClient, '+14155238886', llm, makeData())
+    adapter = new TwilioWhatsAppAdapter(
+      twilioClient, '+14155238886', llm, makeData(), new InMemoryUserPreferencesRepository()
+    )
   })
 
   it('sends a greeting on first message from a number', async () => {

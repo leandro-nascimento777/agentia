@@ -2,6 +2,7 @@ import twilio from 'twilio'
 import type { IFinancialChatPort } from '../../domain/ports/input/IFinancialChatPort'
 import type { IAgentLLMPort } from '../../domain/ports/output/IAgentLLMPort'
 import type { IFinancialDataPort } from '../../domain/ports/output/IFinancialDataPort'
+import type { IUserPreferencesPort } from '../../domain/ports/output/IUserPreferencesPort'
 import { FinancialChatUseCase } from '../../domain/usecases/FinancialChatUseCase'
 import { InMemoryConversationRepository } from '../secondary/InMemoryConversationRepository'
 
@@ -14,7 +15,8 @@ export class TwilioWhatsAppAdapter {
     private readonly twilioClient: TwilioClient,
     private readonly fromNumber: string,
     private readonly llm: IAgentLLMPort,
-    private readonly dataService: IFinancialDataPort
+    private readonly dataService: IFinancialDataPort,
+    private readonly preferences: IUserPreferencesPort
   ) {}
 
   private static readonly TIMEOUT_MS = 55000
@@ -23,7 +25,7 @@ export class TwilioWhatsAppAdapter {
     const { useCase, isNew } = this.getOrCreateSession(fromNumber)
 
     if (isNew) {
-      await this.send(fromNumber, this.greeting())
+      await this.send(fromNumber, this.greeting(fromNumber))
     } else {
       await this.send(fromNumber, '⏳ Consultando...')
     }
@@ -48,6 +50,10 @@ export class TwilioWhatsAppAdapter {
     }
   }
 
+  async sendDirect(to: string, body: string): Promise<void> {
+    await this.send(to, body)
+  }
+
   private withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
     let timer: ReturnType<typeof setTimeout>
     const timeout = new Promise<T>((_, reject) => {
@@ -65,17 +71,23 @@ export class TwilioWhatsAppAdapter {
       const useCase = new FinancialChatUseCase(
         this.llm,
         this.dataService,
-        new InMemoryConversationRepository()
+        new InMemoryConversationRepository(),
+        phoneNumber,
+        this.preferences
       )
       this.sessions.set(phoneNumber, useCase)
     }
     return { useCase: this.sessions.get(phoneNumber)!, isNew }
   }
 
-  private greeting(): string {
+  private greeting(phoneNumber: string): string {
     const hour = new Date().getHours()
     const saudacao = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite'
-    return `${saudacao}! 👋 Olá, sou o DIMAS, a IA da Sakura Consolidadora.\n\nPosso te ajudar com consultas financeiras, relatórios de vendas, cadastro de empresas e muito mais.\n\nComo posso te ajudar?`
+
+    const prefs = this.preferences.get(phoneNumber)
+    const briefingTime = prefs?.briefingTime ?? '08:00'
+
+    return `${saudacao}! Sou o DIMAS, assistente financeiro da Sakura.\n\nTodo dia envio automaticamente um panorama financeiro para voce. Atualmente o horario esta configurado para ${briefingTime}.\n\nSe quiser mudar o horario e so me dizer, por exemplo: "muda para 7h". O que posso fazer por voce agora?`
   }
 
   private async send(to: string, body: string): Promise<void> {
@@ -89,7 +101,6 @@ export class TwilioWhatsAppAdapter {
     }
   }
 
-  // WhatsApp has a 4096 char limit per message
   private splitMessage(text: string, maxLength = 4000): string[] {
     if (text.length <= maxLength) return [text]
     const chunks: string[] = []
