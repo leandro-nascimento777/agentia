@@ -1,4 +1,5 @@
 import { FinancialAgentContainer } from './FinancialAgentContainer'
+import { InMemoryUserPreferencesRepository } from '../adapters/secondary/InMemoryUserPreferencesRepository'
 
 function requireEnv(name: string): string {
   const value = process.env[name]
@@ -15,10 +16,23 @@ function createContainer(): FinancialAgentContainer {
   const twilioAuthToken  = process.env.TWILIO_AUTH_TOKEN
   const twilioFrom       = process.env.TWILIO_WHATSAPP_FROM ?? '+14155238886'
 
+  // Pré-configura usuários conhecidos a partir de env vars
+  // OWNER_WHATSAPP=whatsapp:+5511999990000  OWNER_NAME=Wagner
+  const preferences = new InMemoryUserPreferencesRepository()
+  const ownerPhone = process.env.OWNER_WHATSAPP
+  const ownerName  = process.env.OWNER_NAME ?? 'Wagner'
+  if (ownerPhone) {
+    preferences.set(ownerPhone, {
+      ownerName,
+      briefingTime: process.env.OWNER_BRIEFING_TIME ?? '08:00',
+    })
+  }
+
   return new FinancialAgentContainer({
     anthropicApiKey,
     financialSecret,
     financialBaseUrl,
+    preferences,
     twilio: twilioAccountSid && twilioAuthToken
       ? { accountSid: twilioAccountSid, authToken: twilioAuthToken, fromNumber: twilioFrom }
       : undefined

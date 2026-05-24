@@ -21,12 +21,12 @@ export class FinancialChatUseCase implements IFinancialChatPort {
   ) {}
 
   async chat(userMessage: string): Promise<string> {
-    const briefingTime = this.phoneNumber
-      ? this.preferences?.get(this.phoneNumber)?.briefingTime
-      : undefined
+    const prefs       = this.phoneNumber ? this.preferences?.get(this.phoneNumber) : undefined
+    const ownerName   = prefs?.ownerName
+    const briefingTime = prefs?.briefingTime
 
     const reply = await this.llm.chat(
-      FINANCIAL_WHATSAPP_PROMPT(briefingTime),
+      FINANCIAL_WHATSAPP_PROMPT(ownerName, briefingTime),
       this.history.getHistory(),
       userMessage,
       this.buildToolExecutor()

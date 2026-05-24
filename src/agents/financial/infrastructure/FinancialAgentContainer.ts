@@ -21,6 +21,7 @@ export interface FinancialAgentConfig {
   anthropicApiKey: string
   financialSecret: string
   financialBaseUrl: string
+  preferences?: InMemoryUserPreferencesRepository
   twilio?: TwilioConfig
 }
 
@@ -36,7 +37,7 @@ export class FinancialAgentContainer {
     this.llm         = new ClaudeAgentAdapter(new Anthropic({ apiKey: config.anthropicApiKey }))
     this.dataService = new FinancialAdapterHttpClient(config.financialBaseUrl, config.financialSecret)
 
-    const preferences = new InMemoryUserPreferencesRepository()
+    const preferences = config.preferences ?? new InMemoryUserPreferencesRepository()
 
     this.cli = new FinancialAgentCliAdapter(
       new FinancialChatUseCase(this.llm, this.dataService, new InMemoryConversationRepository())

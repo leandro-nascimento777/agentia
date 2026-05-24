@@ -1,5 +1,6 @@
 export interface UserPreferences {
   phoneNumber: string
+  ownerName: string      // ex: "Wagner"
   briefingTime: string   // "HH:MM" no timezone do usuário, ex: "08:00"
   timezone: string       // ex: "America/Sao_Paulo"
 }

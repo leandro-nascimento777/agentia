@@ -13,8 +13,9 @@ export class InMemoryUserPreferencesRepository implements IUserPreferencesPort {
   set(phoneNumber: string, prefs: Partial<Omit<UserPreferences, 'phoneNumber'>>): void {
     const existing = this.store.get(phoneNumber) ?? {
       phoneNumber,
+      ownerName:    'Usuario',
       briefingTime: DEFAULT_BRIEFING_TIME,
-      timezone: DEFAULT_TIMEZONE,
+      timezone:     DEFAULT_TIMEZONE,
     }
     this.store.set(phoneNumber, { ...existing, ...prefs })
   }

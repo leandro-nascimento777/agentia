@@ -85,9 +85,10 @@ export class TwilioWhatsAppAdapter {
     const saudacao = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite'
 
     const prefs = this.preferences.get(phoneNumber)
+    const name  = prefs?.ownerName ?? 'Wagner'
     const briefingTime = prefs?.briefingTime ?? '08:00'
 
-    return `${saudacao}! Sou o DIMAS, assistente financeiro da Sakura.\n\nTodo dia envio automaticamente um panorama financeiro para voce. Atualmente o horario esta configurado para ${briefingTime}.\n\nSe quiser mudar o horario e so me dizer, por exemplo: "muda para 7h". O que posso fazer por voce agora?`
+    return `${saudacao} Sr. ${name}, tudo bem? Sou o DIMAS, seu assistente pessoal da Sakura.\n\nTodo dia envio automaticamente um panorama financeiro para o senhor. O horario atual e ${briefingTime}.\n\nSe quiser mudar o horario e so me dizer, por exemplo: "muda para 7h". Como posso ajudar agora?`
   }
 
   private async send(to: string, body: string): Promise<void> {
