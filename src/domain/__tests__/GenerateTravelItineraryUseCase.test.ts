@@ -29,7 +29,9 @@ describe('GenerateTravelItineraryUseCase', () => {
   let useCase: GenerateTravelItineraryUseCase;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    jest.resetAllMocks();
+    (mockAiService.generateItinerary as jest.Mock).mockResolvedValue(MOCK_ITINERARY);
+    (mockPdfService.generate as jest.Mock).mockResolvedValue(MOCK_PDF);
     useCase = new GenerateTravelItineraryUseCase(mockAiService, mockPdfService);
   });
 
