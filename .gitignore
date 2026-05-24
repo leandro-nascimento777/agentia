@@ -1,0 +1,33 @@
+# Dependências
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# WhatsApp — sessão autenticada (nunca commitar)
+.wwebjs_auth/
+.wwebjs_cache/
+
+# Variáveis de ambiente
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# TypeScript
+*.tsbuildinfo
+
+# Cobertura de testes
+coverage/
+
+# Editor
+.vscode/
+.idea/

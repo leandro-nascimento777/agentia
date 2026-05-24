@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Brasil API Explorer</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --green: #009c3b; --yellow: #ffdf00; --blue: #002776;
+  --white: #ffffff; --gray-50: #f8fafc; --gray-100: #f1f5f9;
+  --gray-200: #e2e8f0; --gray-600: #475569; --gray-800: #1e293b;
+  --radius: 12px; --shadow: 0 4px 24px rgba(0,0,0,.08);
+}
+html { scroll-behavior: smooth; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--gray-50); color: var(--gray-800); line-height: 1.6; }
+
+/* Hero */
+header {
+  background: linear-gradient(135deg, var(--blue) 0%, #003da5 100%);
+  color: var(--white); text-align: center; padding: 80px 24px 60px;
+  position: relative; overflow: hidden;
+}
+header::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(circle at 70% 50%, rgba(0,156,59,.3) 0%, transparent 60%);
+  pointer-events: none;
+}
+.hero-badge {
+  display: inline-block; background: var(--yellow); color: var(--blue);
+  font-weight: 700; font-size: .75rem; letter-spacing: .1em;
+  text-transform: uppercase; padding: 4px 14px; border-radius: 999px; margin-bottom: 20px;
+}
+header h1 { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 800; margin-bottom: 16px; }
+header p { font-size: 1.125rem; opacity: .85; max-width: 600px; margin: 0 auto 32px; }
+.stats { display: flex; flex-wrap: wrap; justify-content: center; gap: 32px; margin-top: 40px; }
+.stat { text-align: center; }
+.stat strong { display: block; font-size: 2.5rem; font-weight: 800; color: var(--yellow); }
+.stat span { font-size: .875rem; opacity: .8; }
+
+/* Nav */
+nav.pills {
+  background: var(--white); box-shadow: var(--shadow);
+  position: sticky; top: 0; z-index: 100;
+  padding: 12px 24px; overflow-x: auto; display: flex; gap: 8px;
+}
+nav.pills a {
+  white-space: nowrap; padding: 6px 16px; border-radius: 999px;
+  font-size: .8rem; font-weight: 600; text-decoration: none;
+  color: var(--gray-600); background: var(--gray-100); transition: background .2s, color .2s;
+}
+nav.pills a:hover { background: var(--green); color: var(--white); }
+
+/* Layout */
+main { max-width: 1100px; margin: 0 auto; padding: 48px 24px; }
+
+/* Section card */
+.section-card {
+  background: var(--white); border-radius: var(--radius);
+  box-shadow: var(--shadow); margin-bottom: 40px; overflow: hidden;
+}
+.section-header {
+  padding: 20px 28px; display: flex; align-items: center; gap: 14px;
+  border-bottom: 2px solid var(--gray-100); cursor: pointer; user-select: none;
+}
+.section-header:hover { background: var(--gray-50); }
+.section-icon {
+  width: 44px; height: 44px; border-radius: 10px;
+  display: grid; place-items: center; font-size: 1.4rem;
+  background: var(--blue); color: var(--white); flex-shrink: 0;
+}
+.section-title h2 { font-size: 1.15rem; font-weight: 700; }
+.section-title p { font-size: .85rem; color: var(--gray-600); margin-top: 2px; }
+.chevron { margin-left: auto; font-size: 1.2rem; transition: transform .3s; }
+.section-card.collapsed .chevron { transform: rotate(-90deg); }
+.section-body { padding: 24px 28px; display: grid; gap: 16px; }
+.section-card.collapsed .section-body { display: none; }
+
+/* Endpoint */
+.endpoint { border: 1px solid var(--gray-200); border-radius: 10px; overflow: hidden; }
+.endpoint-head {
+  display: flex; align-items: center; gap: 12px; padding: 14px 18px;
+  background: var(--gray-50); border-bottom: 1px solid var(--gray-200);
+}
+.method-badge {
+  font-size: .7rem; font-weight: 700; letter-spacing: .05em;
+  padding: 3px 10px; border-radius: 6px; background: var(--green); color: var(--white); flex-shrink: 0;
+}
+.endpoint-path { font-family: monospace; font-size: .85rem; color: var(--blue); font-weight: 600; flex: 1; }
+.endpoint-desc { font-size: .82rem; color: var(--gray-600); margin-left: auto; max-width: 280px; text-align: right; }
+.endpoint-body { padding: 16px 18px; display: grid; gap: 10px; }
+.input-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.input-row input, .input-row select {
+  flex: 1; min-width: 140px; border: 1px solid var(--gray-200);
+  border-radius: 8px; padding: 8px 12px; font-size: .875rem;
+  outline: none; transition: border-color .2s;
+}
+.input-row input:focus, .input-row select:focus { border-color: var(--green); }
+.btn {
+  padding: 8px 20px; border-radius: 8px; border: none;
+  background: var(--green); color: var(--white); font-weight: 600;
+  font-size: .875rem; cursor: pointer; transition: background .2s, transform .1s; white-space: nowrap;
+}
+.btn:hover { background: #007a2f; }
+.btn:active { transform: scale(.97); }
+
+/* Result */
+.result-box {
+  background: #0d1117; border-radius: 8px; padding: 14px;
+  max-height: 320px; overflow: auto; position: relative;
+}
+.result-box pre { font-size: .78rem; color: #e6edf3; white-space: pre-wrap; word-break: break-all; margin: 0; }
+.result-status {
+  position: absolute; top: 8px; right: 10px;
+  font-size: .7rem; font-weight: 700; padding: 2px 8px; border-radius: 6px;
+}
+.status-ok  { background: var(--green); color: var(--white); }
+.status-err { background: #dc2626; color: var(--white); }
+.status-loading { background: var(--yellow); color: var(--blue); }
+.copy-btn {
+  position: absolute; bottom: 8px; right: 10px;
+  background: rgba(255,255,255,.1); border: none; color: #e6edf3;
+  font-size: .7rem; padding: 3px 8px; border-radius: 4px; cursor: pointer;
+}
+.copy-btn:hover { background: rgba(255,255,255,.2); }
+
+footer {
+  text-align: center; padding: 40px 24px;
+  font-size: .875rem; color: var(--gray-600); border-top: 1px solid var(--gray-200);
+}
+footer a { color: var(--green); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hero-badge">🇧🇷 Open Source</div>
+  <h1>Brasil API Explorer</h1>
+  <p>Explore e teste todos os endpoints da <strong>Brasil API</strong> diretamente do navegador — dados públicos brasileiros de forma moderna.</p>
+  <div class="stats">
+    <div class="stat"><strong>20+</strong><span>Endpoints</span></div>
+    <div class="stat"><strong>15</strong><span>Categorias</span></div>
+    <div class="stat"><strong>Free</strong><span>Sem autenticação</span></div>
+    <div class="stat"><strong>MIT</strong><span>Licença</span></div>
+  </div>
+</header>
+
+<nav class="pills">
+  <a href="#banks">🏦 Bancos</a>
+  <a href="#cambio">💱 Câmbio</a>
+  <a href="#cep">📮 CEP</a>
+  <a href="#cnpj">🏢 CNPJ</a>
+  <a href="#corretoras">📈 Corretoras</a>
+  <a href="#cptec">🌤 CPTEC</a>
+  <a href="#ddd">📞 DDD</a>
+  <a href="#feriados">🎉 Feriados</a>
+  <a href="#fipe">🚗 FIPE</a>
+  <a href="#ibge">🗺 IBGE</a>
+  <a href="#isbn">📚 ISBN</a>
+  <a href="#ncm">📦 NCM</a>
+  <a href="#pix">💸 PIX</a>
+  <a href="#registro">🌐 Registro.br</a>
+  <a href="#taxas">📊 Taxas</a>
+  <a href="#tickers">💹 Tickers</a>
+  <a href="#tuss">🏥 TUSS</a>
+</nav>
+
+<main>
+
+<!-- BANCOS -->
+<section id="banks" class="section-card">
+  <div class="section-header" onclick="toggleSection(this)">
+    <div class="section-icon">🏦</div>
+    <div class="section-title"><h2>Bancos</h2><p>Sistema bancário brasileiro</p></div>
+    <span class="chevron">▾</span>
+  </div>
+  <div class="section-body">
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <span class="method-badge">GET</span>
+        <span class="endpoint-path">/banks/v1</span>
+        <span class="endpoint-desc">Lista todos os bancos</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="input-row">
+          <button class="btn" onclick="call('banks/v1','banks-all')">Buscar todos</button>
+        </div>
+        <div class="result-box" id="banks-all-box" style="display:none">
+          <span class="result-status" id="banks-all-status"></span>
+          <pre id="banks-all"></pre>
+          <button class="copy-btn" onclick="copy('banks-all')">Copiar</button>
+        </div>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <span class="method-badge">GET</span>
+        <span class="endpoint-path">/banks/v1/{code}</span>
+        <span class="endpoint-desc">Banco por código</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="input-row">
+          <input type="number" id="bank-code" placeholder="Código (ex: 1)" />
+          <button class="btn" onclick="call('banks/v1/'+v('bank-code'),'banks-code')">Buscar</button>
+        </div>
+        <div class="result-box" id="banks-code-box" style="display:none">
+          <span class="result-status" id="banks-code-status"></span>
+          <pre id="banks-code"></pre>
+          <button class="copy-btn" onclick="copy('banks-code')">Copiar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CÂMBIO -->
+<section id="cambio" class="section-card">
+  <div class="section-header" onclick="toggleSection(this)">
+    <div class="section-icon">💱</div>
+    <div class="section-title"><h2>Câmbio</h2><p>Cotações de moedas em relação ao Real</p></div>
+    <span class="chevron">▾</span>
+  </div>
+  <div class="section-body">
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <span class="method-badge">GET</span>
+        <span class="endpoint-path">/cambio/v1/moedas</span>
+        <span class="endpoint-desc">Lista todas as moedas disponíveis</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="input-row">
+          <button class="btn" onclick="call('cambio/v1/moedas','cambio-moedas')">Listar moedas</button>
+        </div>
+        <div class="result-box" id="cambio-moedas-box" style="display:none">
+          <span class="result-status" id="cambio-moedas-status"></span>
+          <pre id="cambio-moedas"></pre>
+          <button class="copy-btn" onclick="copy('cambio-moedas')">Copiar</button>
+        </div>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <span class="method-badge">GET</span>
+        <span class="endpoint-path">/cambio/v1/cotacao/{moeda}/{data}</span>
+        <span class="endpoint-desc">Cotação por moeda e data</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="input-row">
+          <input id="cambio-moeda" placeholder="Moeda (ex: USD)" />
+          <input id="cambio-data" type="date" value="2024-01-15" />
+          <button class="btn" onclick="call('cambio/v1/cotacao/'+v('cambio-moeda')+'/'+v('cambio-data'),'cambio-cotacao')">Buscar cotação</button>
+        </div>
+        <div class="result-box" id="cambio-cotacao-box" style="display:none">
+          <span class="result-status" id="cambio-cotacao-status"></span>
+          <pre id="cambio-cotacao"></pre>
+          <button class="copy-btn" onclick="copy('cambio-cotacao')">Copiar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CEP -->
+<section id="cep" class="section-card">
+  <div class="section-header" onclick="toggleSection(this)">
+    <div class="section-icon">📮</div>
+    <div class="section-title"><h2>CEP</h2><p>Endereços por Código de Endereçamento Postal</p></div>
+    <span class="chevron">▾</span>
+  </div>
+  <div class="section-body">
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <span class="method-badge">GET</span>
+        <span class="endpoint-path">/cep/v1/{cep}</span>
+        <span class="endpoint-desc">CEP multi-provider</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="input-row">
+          <input id="cep-v1" placeholder="CEP (ex: 01310100)" maxlength="9" />
+          <button class="btn" onclick="call('cep/v1/'+v('cep-v1').replace(/\D/g,''),'cep-v1-res')">Buscar</button>
+        </div>
+        <div class="result-box" id="cep-v1-res-box" style="display:none">
+          <span class="result-status" id="cep-v1-res-status"></span>
+          <pre id="cep-v1-res"></pre>
+          <button class="copy-btn" onclick="copy('cep-v1-res')">Copiar</button>
+        </div>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <span class="method-badge">GET</span>
+        <span class="endpoint-path">/cep/v2/{cep}</span>
+        <span class="endpoint-desc">CEP v2 com geolocalização</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="input-row">
+          <input id="cep-v2" placeholder="CEP (ex: 01310100)" maxlength="9" />
+          <button class="btn" onclick="call('cep/v2/'+v('cep-v2').replace(/\D/g,''),'cep-v2-res')">Buscar com geo</button>
+        </div>
+        <div class="result-box" id="cep-v2-res-box" style="display:none">
+          <span class="result-status" id="cep-v2-res-status"></span>
+          <pre id="cep-v2-res"></pre>
+          <button class="copy-btn" onclick="copy('cep-v2-res')">Copiar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CNPJ -->
+<section id="cnpj" class="section-card">
+  <div class="section-header" onclick="toggleSection(this)">
+    <div class="section-icon">🏢</div>
+    <div class="section-title"><h2>CNPJ</h2><p>Dados empresariais da Receita Federal</p></div>
+    <span class="chevron">▾</span>
+  </div>
+  <div class="section-body">
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <span class="method-badge">GET</span>
+        <span class="endpoint-path">/cnpj/v1/{cnpj}</span>
+        <span class="endpoint-desc">Dados completos do CNPJ</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="input-row">
+          <input id="cnpj-input" placeholder="CNPJ (ex: 19131243000197)" maxlength="18" />
+          <button class="btn" onclick="call('cnpj/v1/'+v('cnpj-input').replace(/\D/g,''),'cnpj-res')">Consultar</button>
+        </div>
+        <div class="result-box" id="cnpj-res-box" style="display:none">
+          <span class="result-status" id="cnpj-res-status"></span>
+          <pre id="cnpj-res"></pre>
+          <button class="copy-btn" onclick="copy('cnpj-res')">Copiar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CORRETORAS -->
+<section id="corretoras" class="section-card">
+  <div class="section-header" onclick="toggleSection(this)">
+    <div class="section-icon">📈</div>
+    <div class="section-title"><h2>Corretoras</h2><p>Corretoras ativas listadas na CVM</p></div>
+    <span class="chevron">▾</span>
+  </div>
+  <div class="section-body">
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <span class="method-badge">GET</span>
+        <span class="endpoint-path">/cvm/corretoras/v1</span>
+        <span class="endpoint-desc">Lista todas as corretoras</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="input-row">
+          <button class="btn" onclick="call('cvm/corretoras/v1','corretoras-all')">Listar corretoras</button>
+        </div>
+        <div class="result-box" id="corretoras-all-box" style="display:none">
+          <span class="result-status" id="corretoras-all-status"></span>
+          <pre id="corretoras-all"></pre>
+          <button class="copy-btn" onclick="copy('corretoras-all')">Copiar</button>
+        </div>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <span class="method-badge">GET</span>
+        <span class="endpoint-path">/cvm/corretoras/v1/{cnpj}</span>
+        <span class="endpoint-desc">Corretora por CNPJ</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="input-row">
+          <input id="corretora-cnpj" placeholder="CNPJ (ex: 02332886000104)" />
+          <button class="btn" onclick="call('cvm/corretoras/v1/'+v('corretora-cnpj').replace(/\D/g,''),'corretora-res')">Buscar</button>
+        </div>
+        <div class="result-box" id="corretora-res-box" style="display:none">
+          <span class="result-status" id="corretora-res-status"></span>
+          <pre id="corretora-res"></pre>
+          <button class="copy-btn" onclick="copy('corretora-res')">Copiar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CPTEC -->
+<section id="cptec" class="section-card">
+  <div class="section-header" onclick="toggleSection(this)">
+    <div class="section-icon">🌤</div>
+    <div class="section-title"><h2>CPTEC / Clima</h2><p>Meteorologia do CPTEC/INPE</p></div>
+    <span class="chevron">▾</span>
+  </div>
+  <div class="section-body">
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <span class="method-badge">GET</span>
+        <span class="endpoint-path">/cptec/v1/cidade</span>
+        <span class="endpoint-desc">Lista cidades do CPTEC</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="input-row">
+          <button class="btn" onclick="call('cptec/v1/cidade','cptec-cidades')">Listar cidades</button>
+        </div>
+        <div class="result-box" id="cptec-cidades-box" style="display:none">
+          <span class="result-status" id="cptec-cidades-status"></span>
+          <pre id="cptec-cidades"></pre>
+          <button class="copy-btn" onclick="copy('cptec-cidades')">Copiar</button>
+        </div>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <span class="method-badge">GET</span>
+        <span class="endpoint-path">/cptec/v1/cidade/{nome}</span>
+        <span class="endpoint-desc">Busca cidade por nome</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="input-row">
+          <input id="cptec-city-name" placeholder="Nome (ex: São Paulo)" />
+          <button class="btn" onclick="call('cptec/v1/cidade/'+encodeURIComponent(v('cptec-city-name')),'cptec-cidade-search')">Buscar</button>
+        </div>
+        <div class="result-box" id="cptec-cidade-search-box" style="display:none">
+          <span class="result-status" id="cptec-cidade-search-status"></span>
+          <pre id="cptec-cidade-search"></pre>
+          <button class="copy-btn" onclick="copy('cptec-cidade-search')">Copiar</button>
+        </div>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <span class="method-badge">GET</span>
+        <span class="endpoint-path">/cptec/v1/clima/capital</span>
+        <span class="endpoint-desc">Condições nas capitais</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="input-row">
+          <button class="btn" onclick="call('cptec/v1/clima/capital','cptec-capitais')">Ver capitais</button>
+        </div>
+        <div class="result-box" id="cptec-capitais-box" style="display:none">
+          <span class="result-status" id="cptec-capitais-status"></span>
+          <pre id="cptec-capitais"></pre>
+          <button class="copy-btn" onclick="copy('cptec-capitais')">Copiar</button>
+        </div>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <span class="method-badge">GET</span>
+        <span class="endpoint-path">/cptec/v1/clima/aeroporto/{icao}</span>
+        <span class="endpoint-desc">Condições no aeroporto (ICAO)</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="input-row">
+          <input id="cptec-icao" placeholder="Código ICAO (ex: SBGR)" maxlength="4" style="text-transform:uppercase" />
+          <button class="btn" onclick="call('cptec/v1/clima/aeroporto/'+v('cptec-icao').toUpperCase(),'cptec-aeroporto')">Buscar</button>
+        </div>
+        <div class="result-box" id="cptec-aeroporto-box" style="display:none">
+          <span class="result-status" id="cptec-aeroporto-status"></span>
+          <pre id="cptec-aeroporto"></pre>
+          <button class="copy-btn" onclick="copy('cptec-aeroporto')">Copiar</button>
+        </div>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <span class="method-badge">GET</span>
+        <span class="endpoint-path">/cptec/v1/clima/previsao/{cityCode}/{days}</span>
+        <span class="endpoint-desc">Previsão 1–6 dias por código</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="input-row">
+          <input id="cptec-city-code" type="number" placeholder="Código cidade (ex: 999)" />
+          <input id="cptec-days" type="number" min="1" max="6" placeholder="Dias (1-6)" value="3" />
+          <button class="btn" onclick="call('cptec/v1/clima/previsao/'+v('cptec-city-code')+'/'+v('cptec-days'),'cptec-previsao')">Ver previsão</button>
+        </div>
+        <div class="result-box" id="cptec-previsao-box" style="display:none">
+          <span class="result-status" id="cptec-previsao-status"></span>
+          <pre id="cptec-previsao"></pre>
+          <button class="copy-btn" onclick="copy('cptec-previsao')">Copiar</button>
+        </div>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <span class="method-badge">GET</span>
+        <span class="endpoint-path">/cptec/v1/ondas/{cityCode}</span>
+        <span class="endpoint-desc">Previsão oceânica — 1 dia</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="input-row">
+          <input id="cptec-ondas" type="number" placeholder="Código cidade litorânea (ex: 241)" />
+          <button class="btn" onclick="call('cptec/v1/ondas/'+v('cptec-ondas'),'cptec-ondas-res')">Ver ondas</button>
+        </div>
+        <div class="result-box" id="cptec-ondas-res-box" style="display:none">
+          <span class="result-status" id="cptec-ondas-res-status"></span>
+          <pre id="cptec-ondas-res"></pre>
+          <button class="copy-btn" onclick="copy('cptec-ondas-res')">Copiar</button>
+        </div>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <span class="method-badge">GET</span>
+        <span class="endpoint-path">/cptec/v1/ondas/{cityCode}/{days}</span>
+        <span class="endpoint-desc">Previsão oceânica — múltiplos dias</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="input-row">
+          <input id="cptec-ondas-city2" type="number" placeholder="Código cidade" />
+          <input id="cptec-ondas-days" type="number" min="1" max="6" placeholder="Dias (1-6)" value="3" />
+          <button class="btn" onclick="call('cptec/v1/ondas/'+v('cptec-ondas-city2')+'/'+v('cptec-ondas-days'),'cptec-ondas-dias')">Buscar</button>
+        </div>
+        <div class="result-box" id="cptec-ondas-dias-box" style="display:none">
+          <span class="result-status" id="cptec-ondas-dias-status"></span>
+          <pre id="cptec-ondas-dias"></pre>
+          <button class="copy-btn" onclick="copy('cptec-ondas-dias')">Copiar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DDD -->
+<section id="ddd" class="section-card">
+  <div class="section-header" onclick="toggleSection(this)">
+    <div class="section-icon">📞</div>
+    <div class="section-title"><h2>DDD</h2><p>Cidades por código de área</p></div>
+    <span class="chevron">▾</span>
+  </div>
+  <div class="section-body">
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <span class="method-badge">GET</span>
+        <span class="endpoint-path">/ddd/v1/{ddd}</span>
+        <span class="endpoint-desc">Estado e cidades pelo DDD</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="input-row">
+          <input id="ddd-input" type="number" placeholder="DDD (ex: 11)" maxlength="2" />
+          <button class="btn" onclick="call('ddd/v1/'+v('ddd-input'),'ddd-res')">Buscar</button>
+        </div>
+        <div class="result-box" id="ddd-res-box" style="display:none">
+          <span class="result-status" id="ddd-res-status"></span>
+          <pre id="ddd-res"></pre>
+          <button class="copy-btn" onclick="copy('ddd-res')">Copiar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FERIADOS -->
+<section id="feriados" class="section-card">
+  <div class="section-header" onclick="toggleSection(this)">
+    <div class="section-icon">🎉</div>
+    <div class="section-title"><h2>Feriados Nacionais</h2><p>Feriados do Brasil por ano</p></div>
+    <span class="chevron">▾</span>
+  </div>
+  <div class="section-body">
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <span class="method-badge">GET</span>
+        <span class="endpoint-path">/feriados/v1/{ano}</span>
+        <span class="endpoint-desc">Feriados nacionais do ano</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="input-row">
+          <input id="feriados-ano" type="number" placeholder="Ano (ex: 2025)" value="2025" />
+          <button class="btn" onclick="call('feriados/v1/'+v('feriados-ano'),'feriados-res')">Buscar</button>
+        </div>
+        <div class="result-box" id="feriados-res-box" style="display:none">
+          <span class="result-status" id="feriados-res-status"></span>
+          <pre id="feriados-res"></pre>
+          <button class="copy-btn" onclick="copy('feriados-res')">Copiar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FIPE -->
+<section id="fipe" class="section-card">
+  <div class="section-header" onclick="toggleSection(this)">
+    <div class="section-icon">🚗</div>
+    <div class="section-title"><h2>FIPE</h2><p>Tabela FIPE de veículos</p></div>
+    <span class="chevron">▾</span>
+  </div>
+  <div class="section-body">
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <span class="method-badge">GET</span>
+        <span class="endpoint-path">/fipe/marcas/v1/{tipoVeiculo}</span>
+        <span class="endpoint-desc">Marcas por tipo de veículo</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="input-row">
+          <select id="fipe-tipo">
+            <option value="carros">carros</option>
+            <option value="motos">motos</option>
+            <option value="caminhoes">caminhoes</option>
+          </select>
+          <button class="btn" onclick="call('fipe/marcas/v1/'+v('fipe-tipo'),'fipe-marcas')">Listar marcas</button>
+        </div>
+        <div class="result-box" id="fipe-marcas-box" style="display:none">
+          <span class="result-status" id="fipe-marcas-status"></span>
+          <pre id="fipe-marcas"></pre>
+          <button class="copy-btn" onclick="copy('fipe-marcas')">Copiar</button>
+        </div>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <span class="method-badge">GET</span>
+        <span class="endpoint-path">/fipe/preco/v1/{codigoFipe}</span>
+        <span class="endpoint-desc">Preço pelo código FIPE</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="input-row">
+          <input id="fipe-codigo" placeholder="Código FIPE (ex: 001004-9)" />
+          <button class="btn" onclick="call('fipe/preco/v1/'+v('fipe-codigo'),'fipe-preco')">Buscar preço</button>
+        </div>
+        <div class="result-box" id="fipe-preco-box" style="display:none">
+          <span class="result-status" id="fipe-preco-status"></span>
+          <pre id="fipe-preco"></pre>
+          <button class="copy-btn" onclick="copy('fipe-preco')">Copiar</button>
+        </div>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <span class="method-badge">GET</span>
+        <span class="endpoint-path">/fipe/tabelas/v1</span>
+        <span class="endpoint-desc">Lista de tabelas de referência</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="input-row">
+          <button class="btn" onclick="call('fipe/tabelas/v1','fipe-tabelas')">Listar tabelas</button>
+        </div>
+        <div class="result-box" id="fipe-tabelas-box" style="display:none">
+          <span class="result-status" id="fipe-tabelas-status"></span>
+          <pre id="fipe-tabelas"></pre>
+          <button class="copy-btn" onclick="copy('fipe-tabelas')">Copiar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- IBGE -->
+<section id="ibge" class="section-card">
+  <div class="section-header" onclick="toggleSection(this)">
+    <div class="section-icon">🗺</div>
+    <div class="section-title"><h2>IBGE</h2><p>Municípios e estados brasileiros</p></div>
+    <span class="chevron">▾</span>
+  </div>
+  <div class="section-body">
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <span class="method-badge">GET</span>
+        <span class="endpoint-path">/ibge/municipios/v1/{uf}</span>
+        <span class="endpoint-desc">Municípios por UF</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="input-row">
+          <input id="ibge-uf" placeholder="UF (ex: SP, RJ, MG)" maxlength="2" style="text-transform:uppercase" />
+          <button class="btn" onclick="call('ibge/municipios/v1/'+v('ibge-uf').toUpperCase(),'ibge-municipios')">Buscar</button>
+        </div>
+        <div class="result-box" id="ibge-municipios-box" style="display:none">
+          <span class="result-status" id="ibge-municipios-status"></span>
+          <pre id="ibge-municipios"></pre>
+          <button class="copy-btn" onclick="copy('ibge-municipios')">Copiar</button>
+        </div>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <span class="method-badge">GET</span>
+        <span class="endpoint-path">/ibge/estados/v1</span>
+        <span class="endpoint-desc">Todos os estados</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="input-row">
+          <button class="btn" onclick="call('ibge/estados/v1','ibge-estados')">Listar estados</button>
+        </div>
+        <div class="result-box" id="ibge-estados-box" style="display:none">
+          <span class="result-status" id="ibge-estados-status"></span>
+          <pre id="ibge-estados"></pre>
+          <button class="copy-btn" onclick="copy('ibge-estados')">Copiar</button>
+        </div>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <span class="method-badge">GET</span>
+        <span class="endpoint-path">/ibge/estados/v1/{uf}</span>
+        <span class="endpoint-desc">Estado por sigla ou código</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="input-row">
+          <input id="ibge-estado-uf" placeholder="Sigla (ex: SP) ou código (ex: 35)" />
+          <button class="btn" onclick="call('ibge/estados/v1/'+v('ibge-estado-uf').toUpperCase(),'ibge-estado')">Buscar estado</button>
+        </div>
+        <div class="result-box" id="ibge-estado-box" style="display:none">
+          <span class="result-status" id="ibge-estado-status"></span>
+          <pre id="ibge-estado"></pre>
+          <button class="copy-btn" onclick="copy('ibge-estado')">Copiar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ISBN -->
+<section id="isbn" class="section-card">
+  <div class="section-header" onclick="toggleSection(this)">
+    <div class="section-icon">📚</div>
+    <div class="section-title"><h2>ISBN</h2><p>Dados de livros pelo ISBN</p></div>
+    <span class="chevron">▾</span>
+  </div>
+  <div class="section-body">
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <span class="method-badge">GET</span>
+        <span class="endpoint-path">/isbn/v1/{isbn}</span>
+        <span class="endpoint-desc">Informações do livro pelo ISBN</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="input-row">
+          <input id="isbn-input" placeholder="ISBN (ex: 9788545702870)" maxlength="14" />
+          <button class="btn" onclick="call('isbn/v1/'+v('isbn-input').replace(/\D/g,''),'isbn-res')">Buscar</button>
+        </div>
+        <div class="result-box" id="isbn-res-box" style="display:none">
+          <span class="result-status" id="isbn-res-status"></span>
+          <pre id="isbn-res"></pre>
+          <button class="copy-btn" onclick="copy('isbn-res')">Copiar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- NCM -->
+<section id="ncm" class="section-card">
+  <div class="section-header" onclick="toggleSection(this)">
+    <div class="section-icon">📦</div>
+    <div class="section-title"><h2>NCM</h2><p>Nomenclatura Comum do Mercosul</p></div>
+    <span class="chevron">▾</span>
+  </div>
+  <div class="section-body">
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <span class="method-badge">GET</span>
+        <span class="endpoint-path">/ncm/v1</span>
+        <span class="endpoint-desc">Lista todos os NCMs</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="input-row">
+          <button class="btn" onclick="call('ncm/v1','ncm-all')">Listar NCMs</button>
+        </div>
+        <div class="result-box" id="ncm-all-box" style="display:none">
+          <span class="result-status" id="ncm-all-status"></span>
+          <pre id="ncm-all"></pre>
+          <button class="copy-btn" onclick="copy('ncm-all')">Copiar</button>
+        </div>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <span class="method-badge">GET</span>
+        <span class="endpoint-path">/ncm/v1/{code}</span>
+        <span class="endpoint-desc">Busca NCM por código</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="input-row">
+          <input id="ncm-code" placeholder="Código NCM (ex: 84713012)" />
+          <button class="btn" onclick="call('ncm/v1/'+v('ncm-code'),'ncm-code-res')">Buscar</button>
+        </div>
+        <div class="result-box" id="ncm-code-res-box" style="display:none">
+          <span class="result-status" id="ncm-code-res-status"></span>
+          <pre id="ncm-code-res"></pre>
+          <button class="copy-btn" onclick="copy('ncm-code-res')">Copiar</button>
+        </div>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <span class="method-badge">GET</span>
+        <span class="endpoint-path">/ncm/v1?search={termo}</span>
+        <span class="endpoint-desc">Busca NCM por descrição</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="input-row">
+          <input id="ncm-search" placeholder="Termo (ex: computador)" />
+          <button class="btn" onclick="call('ncm/v1?search='+encodeURIComponent(v('ncm-search')),'ncm-search-res')">Pesquisar</button>
+        </div>
+        <div class="result-box" id="ncm-search-res-box" style="display:none">
+          <span class="result-status" id="ncm-search-res-status"></span>
+          <pre id="ncm-search-res"></pre>
+          <button class="copy-btn" onclick="copy('ncm-search-res')">Copiar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PIX -->
+<section id="pix" class="section-card">
+  <div class="section-header" onclick="toggleSection(this)">
+    <div class="section-icon">💸</div>
+    <div class="section-title"><h2>PIX</h2><p>Participantes do ecossistema PIX</p></div>
+    <span class="chevron">▾</span>
+  </div>
+  <div class="section-body">
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <span class="method-badge">GET</span>
+        <span class="endpoint-path">/pix/v1/participants</span>
+        <span class="endpoint-desc">Todos os participantes do PIX</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="input-row">
+          <button class="btn" onclick="call('pix/v1/participants','pix-all')">Listar participantes</button>
+        </div>
+        <div class="result-box" id="pix-all-box" style="display:none">
+          <span class="result-status" id="pix-all-status"></span>
+          <pre id="pix-all"></pre>
+          <button class="copy-btn" onclick="copy('pix-all')">Copiar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- REGISTRO.BR -->
+<section id="registro" class="section-card">
+  <div class="section-header" onclick="toggleSection(this)">
+    <div class="section-icon">🌐</div>
+    <div class="section-title"><h2>Registro.br</h2><p>Informações de domínios .br</p></div>
+    <span class="chevron">▾</span>
+  </div>
+  <div class="section-body">
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <span class="method-badge">GET</span>
+        <span class="endpoint-path">/registrobr/v1/{fqdn}</span>
+        <span class="endpoint-desc">Consulta domínio .br</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="input-row">
+          <input id="registro-fqdn" placeholder="Domínio (ex: globo.com.br)" />
+          <button class="btn" onclick="call('registrobr/v1/'+v('registro-fqdn'),'registro-res')">Consultar</button>
+        </div>
+        <div class="result-box" id="registro-res-box" style="display:none">
+          <span class="result-status" id="registro-res-status"></span>
+          <pre id="registro-res"></pre>
+          <button class="copy-btn" onclick="copy('registro-res')">Copiar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TAXAS -->
+<section id="taxas" class="section-card">
+  <div class="section-header" onclick="toggleSection(this)">
+    <div class="section-icon">📊</div>
+    <div class="section-title"><h2>Taxas de Juros</h2><p>Taxas do Banco Central do Brasil</p></div>
+    <span class="chevron">▾</span>
+  </div>
+  <div class="section-body">
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <span class="method-badge">GET</span>
+        <span class="endpoint-path">/taxas/v1</span>
+        <span class="endpoint-desc">Lista todas as taxas</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="input-row">
+          <button class="btn" onclick="call('taxas/v1','taxas-all')">Ver taxas</button>
+        </div>
+        <div class="result-box" id="taxas-all-box" style="display:none">
+          <span class="result-status" id="taxas-all-status"></span>
+          <pre id="taxas-all"></pre>
+          <button class="copy-btn" onclick="copy('taxas-all')">Copiar</button>
+        </div>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <span class="method-badge">GET</span>
+        <span class="endpoint-path">/taxas/v1/{sigla}</span>
+        <span class="endpoint-desc">Taxa por sigla</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="input-row">
+          <input id="taxa-sigla" placeholder="Sigla (ex: CDI, SELIC)" style="text-transform:uppercase" />
+          <button class="btn" onclick="call('taxas/v1/'+v('taxa-sigla').toUpperCase(),'taxas-res')">Buscar</button>
+        </div>
+        <div class="result-box" id="taxas-res-box" style="display:none">
+          <span class="result-status" id="taxas-res-status"></span>
+          <pre id="taxas-res"></pre>
+          <button class="copy-btn" onclick="copy('taxas-res')">Copiar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TICKERS -->
+<section id="tickers" class="section-card">
+  <div class="section-header" onclick="toggleSection(this)">
+    <div class="section-icon">💹</div>
+    <div class="section-title"><h2>Tickers / Ações</h2><p>Cotações de ações e criptomoedas</p></div>
+    <span class="chevron">▾</span>
+  </div>
+  <div class="section-body">
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <span class="method-badge">GET</span>
+        <span class="endpoint-path">/quotation/v1/currency/list</span>
+        <span class="endpoint-desc">Lista de pares de moedas disponíveis</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="input-row">
+          <button class="btn" onclick="call('quotation/v1/currency/list','tickers-list')">Listar pares</button>
+        </div>
+        <div class="result-box" id="tickers-list-box" style="display:none">
+          <span class="result-status" id="tickers-list-status"></span>
+          <pre id="tickers-list"></pre>
+          <button class="copy-btn" onclick="copy('tickers-list')">Copiar</button>
+        </div>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <span class="method-badge">GET</span>
+        <span class="endpoint-path">/quotation/v1/currency/{moeda}</span>
+        <span class="endpoint-desc">Cotação de par de moeda</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="input-row">
+          <input id="ticker-moeda" placeholder="Par (ex: USD-BRL, BTC-BRL)" />
+          <button class="btn" onclick="call('quotation/v1/currency/'+v('ticker-moeda').toUpperCase(),'ticker-res')">Buscar</button>
+        </div>
+        <div class="result-box" id="ticker-res-box" style="display:none">
+          <span class="result-status" id="ticker-res-status"></span>
+          <pre id="ticker-res"></pre>
+          <button class="copy-btn" onclick="copy('ticker-res')">Copiar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TUSS -->
+<section id="tuss" class="section-card">
+  <div class="section-header" onclick="toggleSection(this)">
+    <div class="section-icon">🏥</div>
+    <div class="section-title"><h2>TUSS</h2><p>Terminologia Unificada em Saúde Suplementar</p></div>
+    <span class="chevron">▾</span>
+  </div>
+  <div class="section-body">
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <span class="method-badge">GET</span>
+        <span class="endpoint-path">/tuss/procedimento/v1/{procedureId}</span>
+        <span class="endpoint-desc">Procedimento por código TUSS</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="input-row">
+          <input id="tuss-id" type="number" placeholder="Código TUSS (ex: 40101010)" />
+          <button class="btn" onclick="call('tuss/procedimento/v1/'+v('tuss-id'),'tuss-res')">Buscar</button>
+        </div>
+        <div class="result-box" id="tuss-res-box" style="display:none">
+          <span class="result-status" id="tuss-res-status"></span>
+          <pre id="tuss-res"></pre>
+          <button class="copy-btn" onclick="copy('tuss-res')">Copiar</button>
+        </div>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="endpoint-head">
+        <span class="method-badge">GET</span>
+        <span class="endpoint-path">/tuss/terminologia/v1/{page}</span>
+        <span class="endpoint-desc">Terminologia paginada</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="input-row">
+          <input id="tuss-page" type="number" placeholder="Página (ex: 1)" value="1" min="1" />
+          <button class="btn" onclick="call('tuss/terminologia/v1/'+v('tuss-page'),'tuss-term')">Listar</button>
+        </div>
+        <div class="result-box" id="tuss-term-box" style="display:none">
+          <span class="result-status" id="tuss-term-status"></span>
+          <pre id="tuss-term"></pre>
+          <button class="copy-btn" onclick="copy('tuss-term')">Copiar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <p>Powered by <a href="https://brasilapi.com.br" target="_blank">BrasilAPI</a> — dados públicos brasileiros de forma moderna.</p>
+</footer>
+
+<script>
+  // Helpers
+  function v(id) { return document.getElementById(id)?.value ?? ''; }
+
+  async function call(path, resultId) {
+    const box    = document.getElementById(resultId + '-box');
+    const pre    = document.getElementById(resultId);
+    const status = document.getElementById(resultId + '-status');
+
+    box.style.display = 'block';
+    pre.textContent   = 'Carregando...';
+    status.textContent = '⏳ Loading';
+    status.className = 'result-status status-loading';
+
+    try {
+      const res  = await fetch('/proxy/' + path);
+      const data = await res.json();
+      pre.textContent = JSON.stringify(data, null, 2);
+      status.textContent = res.ok ? '✅ ' + res.status : '❌ ' + res.status;
+      status.className = 'result-status ' + (res.ok ? 'status-ok' : 'status-err');
+    } catch (err) {
+      pre.textContent  = 'Erro: ' + err.message;
+      status.textContent = '❌ Error';
+      status.className = 'result-status status-err';
+    }
+  }
+
+  function copy(id) {
+    const text = document.getElementById(id)?.textContent ?? '';
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.querySelector(`#${id}-box .copy-btn`);
+      if (btn) { btn.textContent = 'Copiado!'; setTimeout(() => btn.textContent = 'Copiar', 1500); }
+    });
+  }
+
+  function toggleSection(header) {
+    header.closest('.section-card').classList.toggle('collapsed');
+  }
+</script>
+</body>
+</html>
