@@ -1,6 +1,7 @@
 import { PDFDocument, StandardFonts, rgb, PDFFont, PDFPage } from 'pdf-lib';
 import { TravelItinerary, DayPlan } from '../../domain/entities/TravelItinerary';
 import { IPdfGeneratorPort } from '../../domain/ports/output/IPdfGeneratorPort';
+import { toPdfSafeText } from './utils/pdfText';
 
 const PAGE_WIDTH = 595;
 const PAGE_HEIGHT = 842;
@@ -152,24 +153,6 @@ export class PdfGeneratorAdapter implements IPdfGeneratorPort {
     font: PDFFont,
     color: ReturnType<typeof rgb>,
   ): void {
-    const safe = this.sanitize(text);
-    page.drawText(safe, { x, y, size, font, color });
-  }
-
-  private static readonly ACCENT_MAP: Array<[RegExp, string]> = [
-    [/[áàâã]/gi, 'a'],
-    [/[éèê]/gi, 'e'],
-    [/[íì]/gi, 'i'],
-    [/[óòôõ]/gi, 'o'],
-    [/[úù]/gi, 'u'],
-    [/[ç]/gi, 'c'],
-  ];
-
-  private sanitize(text: string): string {
-    let result = text;
-    for (const [pattern, base] of PdfGeneratorAdapter.ACCENT_MAP) {
-      result = result.replace(pattern, (c) => (c === c.toUpperCase() ? base.toUpperCase() : base));
-    }
-    return result.replace(/[^\x20-\x7E]/g, '?');
+    page.drawText(toPdfSafeText(text), { x, y, size, font, color });
   }
 }

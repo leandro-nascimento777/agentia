@@ -1,9 +1,11 @@
 import OpenAI from 'openai';
+import { z } from 'zod';
 import { TravelRequest } from '../../domain/entities/TravelRequest';
 import { TravelItinerary, DayPlan } from '../../domain/entities/TravelItinerary';
 import { DaysCount } from '../../domain/value-objects/DaysCount';
 import { Destination } from '../../domain/value-objects/Destination';
 import { ITravelAIServicePort } from '../../domain/ports/output/ITravelAIServicePort';
+import { extractDays, extractDestination } from './utils/travelTextParser';
 
 const SYSTEM_PROMPT = `Você é um especialista em viagens. Analise a mensagem e gere um roteiro detalhado.
 Retorne APENAS JSON válido com esta estrutura exata:
@@ -22,20 +24,20 @@ Retorne APENAS JSON válido com esta estrutura exata:
   "restaurants": ["restaurante 1", "restaurante 2", "restaurante 3"]
 }`;
 
-interface ItineraryData {
-  destination: string;
-  days: number;
-  dayPlans: Array<{ day: number; activities: string[]; meals: string[] }>;
-  hotel: string;
-  transport: string[];
-  restaurants: string[];
-}
+const ItineraryDataSchema = z.object({
+  destination: z.string().min(1),
+  days: z.number().int().min(1).max(30),
+  dayPlans: z.array(z.object({
+    day: z.number().int().min(1),
+    activities: z.array(z.string()),
+    meals: z.array(z.string()),
+  })),
+  hotel: z.string(),
+  transport: z.array(z.string()),
+  restaurants: z.array(z.string()),
+});
 
-const DAYS_REGEX = /(\d+)\s*dias?/i;
-const DESTINATION_PATTERNS = [
-  /(?:em|para|no|na|ao?)\s+([A-ZÀ-Úa-zà-ú]+(?:\s+[A-ZÀ-Úa-zà-ú]+){0,3})/i,
-  /([A-ZÀ-Ú][a-zà-ú]+(?:\s+[A-ZÀ-Ú][a-zà-ú]+){0,2})\s+(?:por\s+)?\d+\s*dias?/i,
-];
+type ItineraryData = z.infer<typeof ItineraryDataSchema>;
 
 export class OpenAITravelAdapter implements ITravelAIServicePort {
   private client: OpenAI | null = null;
@@ -91,8 +93,12 @@ export class OpenAITravelAdapter implements ITravelAIServicePort {
     const raw = response.choices[0]?.message?.content;
     if (!raw) throw new Error('OpenAI retornou resposta vazia');
 
-    const data = JSON.parse(raw) as ItineraryData;
-    return this.buildItinerary(data);
+    const parsed = ItineraryDataSchema.safeParse(JSON.parse(raw));
+    if (!parsed.success) {
+      throw new Error(`Resposta da OpenAI fora do formato esperado: ${parsed.error.message}`);
+    }
+
+    return this.buildItinerary(parsed.data);
   }
 
   private buildItinerary(data: ItineraryData): TravelItinerary {
@@ -115,8 +121,8 @@ export class OpenAITravelAdapter implements ITravelAIServicePort {
   }
 
   private generateMockItinerary(text: string): TravelItinerary {
-    const days = this.extractDays(text);
-    const destName = this.extractDestination(text);
+    const days = extractDays(text);
+    const destName = extractDestination(text);
 
     const destination = Destination.create(destName);
     const daysCount = DaysCount.create(days);
@@ -147,19 +153,5 @@ export class OpenAITravelAdapter implements ITravelAIServicePort {
         'Bistrô & Culinária Local',
       ],
     );
-  }
-
-  private extractDays(text: string): number {
-    const match = text.match(DAYS_REGEX);
-    if (!match) return 3;
-    return Math.min(Math.max(parseInt(match[1], 10), 1), 30);
-  }
-
-  private extractDestination(text: string): string {
-    for (const pattern of DESTINATION_PATTERNS) {
-      const match = text.match(pattern);
-      if (match?.[1]) return match[1].trim();
-    }
-    return 'Destino Especial';
   }
 }
