@@ -1,4 +1,4 @@
-const today = () => new Date().toLocaleDateString('pt-BR')
+const today = () => new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
 
 /**
  * Prompt de produção — WhatsApp/Twilio.
