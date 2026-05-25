@@ -3,7 +3,7 @@ import { container } from '@/agents/financial/infrastructure/container.singleton
 
 // ─── Rate limiter (sliding window, in-memory) ──────────────────────────────
 
-const RATE_LIMIT_MAX = 10
+const RATE_LIMIT_MAX = 30 // 30 requisições por minuto por IP
 const RATE_LIMIT_WINDOW_MS = 60_000
 
 const rateLimitStore = new Map<string, { count: number; resetAt: number }>()
