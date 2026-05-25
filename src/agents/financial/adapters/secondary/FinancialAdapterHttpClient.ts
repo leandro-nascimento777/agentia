@@ -57,6 +57,16 @@ export class FinancialAdapterHttpClient implements IFinancialDataPort {
     }
   }
 
+  // Extrai o array `data` de respostas paginadas { data: [], total, page, limit }
+  // Retorna o resultado inteiro se não for paginado (retrocompatível)
+  private async getReport(path: string, params: Params = {}): Promise<unknown> {
+    const result = await this.get(path, params)
+    if (result && typeof result === 'object' && 'data' in result && Array.isArray((result as Record<string, unknown>).data)) {
+      return (result as Record<string, unknown>).data
+    }
+    return result
+  }
+
   checkHealth()                                    { return this.get('/health') }
 
   getSicaTables()                                  { return this.get('/api/sica/schema') }
@@ -83,15 +93,18 @@ export class FinancialAdapterHttpClient implements IFinancialDataPort {
 
   // ─── Novos relatórios v1.1-C ─────────────────────────────────────────────
 
-  getSaudeBase()                                   { return this.get('/api/reports/saude-bases') as Promise<SaudeBaseRow[]> }
-  getInadimplencia()                               { return this.get('/api/reports/inadimplencia') as Promise<{ total: InadimplenciaRow; top20: InadimplenciaRow[] }> }
-  getRankingGestores()                             { return this.get('/api/reports/ranking-gestores') as Promise<GestorRankingRow[]> }
-  getPipeline()                                    { return this.get('/api/reports/pipeline') as Promise<PipelineRow[]> }
+  // ─── 9 endpoints existem na API — usa getReport para extrair data[] ─────────
+  getSaudeBase()                                   { return this.getReport('/api/reports/saude-bases') as Promise<SaudeBaseRow[]> }
+  getInadimplencia()                               { return this.getReport('/api/reports/inadimplencia') as Promise<{ total: InadimplenciaRow; top20: InadimplenciaRow[] }> }
+  getRankingGestores()                             { return this.getReport('/api/reports/ranking-gestores') as Promise<GestorRankingRow[]> }
+  getPipeline()                                    { return this.getReport('/api/reports/pipeline') as Promise<PipelineRow[]> }
+  getCreditoPorBase()                              { return this.getReport('/api/reports/credito-por-base') as Promise<CreditoBaseRow[]> }
+  getRiscoAgencias()                               { return this.getReport('/api/reports/risco-agencias') as Promise<RiscoAgenciaRow[]> }
+  getRankingCias(p?: { limit?: number })           { return this.getReport('/api/reports/ranking-cias', p as Params) as Promise<CiaRankingRow[]> }
+  getEmbarquesFuturos(p?: { days?: number })       { return this.getReport('/api/reports/embarques-futuros', p as Params) as Promise<EmbarqueRow[]> }
+  getNacionalVsInternacional()                     { return this.getReport('/api/reports/nacional-vs-internacional') as Promise<RotaRow[]> }
+
+  // ─── 2 endpoints ainda não existem na API — delegados ao Supabase ──────────
   getNovasAgencias()                               { return this.get('/api/reports/novas-agencias') as Promise<NovasAgenciasRow[]> }
-  getCreditoPorBase()                              { return this.get('/api/reports/credito-por-base') as Promise<CreditoBaseRow[]> }
-  getRiscoAgencias()                               { return this.get('/api/reports/risco-agencias') as Promise<RiscoAgenciaRow[]> }
-  getRankingCias(p?: { limit?: number })           { return this.get('/api/reports/ranking-cias', p as Params) as Promise<CiaRankingRow[]> }
   getTopAgencias(p?: { limit?: number })           { return this.get('/api/reports/top-agencias', p as Params) as Promise<AgenciaRankingRow[]> }
-  getEmbarquesFuturos(p?: { days?: number })       { return this.get('/api/reports/embarques-futuros', p as Params) as Promise<EmbarqueRow[]> }
-  getNacionalVsInternacional()                     { return this.get('/api/reports/nacional-vs-internacional') as Promise<RotaRow[]> }
 }
