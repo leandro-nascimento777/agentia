@@ -8,8 +8,8 @@ const config: Config = {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
   collectCoverageFrom: [
-    'src/domain/**/*.ts',
-    '!src/domain/__tests__/**',
+    'src/agents/financial/domain/**/*.ts',
+    '!src/agents/financial/domain/**/__tests__/**',
   ],
   transform: {
     '^.+\\.tsx?$': ['ts-jest', { tsconfig: { module: 'commonjs' } }],

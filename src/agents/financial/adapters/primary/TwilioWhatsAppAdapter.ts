@@ -1,31 +1,38 @@
 import twilio from 'twilio'
 import type { IFinancialChatPort } from '../../domain/ports/input/IFinancialChatPort'
-import type { IAgentLLMPort } from '../../domain/ports/output/IAgentLLMPort'
-import type { IFinancialDataPort } from '../../domain/ports/output/IFinancialDataPort'
 import type { IUserPreferencesPort } from '../../domain/ports/output/IUserPreferencesPort'
-import { FinancialChatUseCase } from '../../domain/usecases/FinancialChatUseCase'
-import { InMemoryConversationRepository } from '../secondary/InMemoryConversationRepository'
+import type { IRateLimitPort } from '../../domain/ports/output/IRateLimitPort'
+import { getGreeting } from '../../domain/utils/greeting'
 
 type TwilioClient = ReturnType<typeof twilio>
 
+export type SessionFactory = (phoneNumber: string) => IFinancialChatPort
+
+type Session = { useCase: IFinancialChatPort; lastSeen: number }
+
 export class TwilioWhatsAppAdapter {
-  private readonly sessions = new Map<string, IFinancialChatPort>()
+  private readonly sessions = new Map<string, Session>()
+  private static readonly TIMEOUT_MS = 55000
+  private static readonly SESSION_TTL_MS = 2 * 60 * 60 * 1000 // 2 hours
 
   constructor(
     private readonly twilioClient: TwilioClient,
     private readonly fromNumber: string,
-    private readonly llm: IAgentLLMPort,
-    private readonly dataService: IFinancialDataPort,
-    private readonly preferences: IUserPreferencesPort
+    private readonly sessionFactory: SessionFactory,
+    private readonly preferences: IUserPreferencesPort,
+    private readonly rateLimiter: IRateLimitPort,
   ) {}
 
-  private static readonly TIMEOUT_MS = 55000
-
   async handleWebhook(messageBody: string, fromNumber: string): Promise<void> {
+    if (!this.rateLimiter.check(fromNumber)) {
+      await this.send(fromNumber, 'Limite diário de consultas atingido. Retorne amanhã.')
+      return
+    }
+
     const { useCase, isNew } = this.getOrCreateSession(fromNumber)
 
     if (isNew) {
-      await this.send(fromNumber, this.greeting(fromNumber))
+      await this.send(fromNumber, this.buildGreeting(fromNumber))
     } else {
       await this.send(fromNumber, '⏳ Consultando...')
     }
@@ -55,50 +62,55 @@ export class TwilioWhatsAppAdapter {
   }
 
   private withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-    let timer: ReturnType<typeof setTimeout>
+    let timer: ReturnType<typeof setTimeout> | undefined
     const timeout = new Promise<T>((_, reject) => {
       timer = setTimeout(() => reject(new Error('timeout')), ms)
     })
     return Promise.race([
-      promise.finally(() => clearTimeout(timer!)),
+      promise.finally(() => clearTimeout(timer)),
       timeout,
     ])
   }
 
   private getOrCreateSession(phoneNumber: string): { useCase: IFinancialChatPort; isNew: boolean } {
-    const isNew = !this.sessions.has(phoneNumber)
-    if (isNew) {
-      const useCase = new FinancialChatUseCase(
-        this.llm,
-        this.dataService,
-        new InMemoryConversationRepository(),
-        phoneNumber,
-        this.preferences
-      )
-      this.sessions.set(phoneNumber, useCase)
+    this.evictExpiredSessions()
+    const existing = this.sessions.get(phoneNumber)
+    if (existing) {
+      existing.lastSeen = Date.now()
+      return { useCase: existing.useCase, isNew: false }
     }
-    return { useCase: this.sessions.get(phoneNumber)!, isNew }
+    const useCase = this.sessionFactory(phoneNumber)
+    this.sessions.set(phoneNumber, { useCase, lastSeen: Date.now() })
+    return { useCase, isNew: true }
   }
 
-  private greeting(phoneNumber: string): string {
-    const hour = new Date().getHours()
-    const saudacao = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite'
+  private evictExpiredSessions(): void {
+    const cutoff = Date.now() - TwilioWhatsAppAdapter.SESSION_TTL_MS
+    for (const [phone, session] of this.sessions) {
+      if (session.lastSeen < cutoff) this.sessions.delete(phone)
+    }
+  }
 
+  private buildGreeting(phoneNumber: string): string {
     const prefs = this.preferences.get(phoneNumber)
     const name  = prefs?.ownerName ?? 'Wagner'
     const briefingTime = prefs?.briefingTime ?? '08:00'
-
+    const saudacao = getGreeting(new Date().getHours())
     return `${saudacao} Sr. ${name}, tudo bem? Sou o DIMAS, seu assistente pessoal da Sakura.\n\nTodo dia envio automaticamente um panorama financeiro para o senhor. O horario atual e ${briefingTime}.\n\nSe quiser mudar o horario e so me dizer, por exemplo: "muda para 7h". Como posso ajudar agora?`
   }
 
   private async send(to: string, body: string): Promise<void> {
     const chunks = this.splitMessage(body)
     for (const chunk of chunks) {
-      await this.twilioClient.messages.create({
+      const msg = await this.twilioClient.messages.create({
         from: `whatsapp:${this.fromNumber}`,
         to,
         body: chunk
       })
+      console.log(`[Twilio] sid=${msg.sid} status=${msg.status} to=${to} from=whatsapp:${this.fromNumber}`)
+      if (msg.errorCode) {
+        console.error(`[Twilio] errorCode=${msg.errorCode} errorMessage=${msg.errorMessage}`)
+      }
     }
   }
 

@@ -28,15 +28,15 @@ export class BriefingScheduler {
   }
 
   private async tick(): Promise<void> {
-    const now  = new Date()
-    const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+    const hhmm = new Intl.DateTimeFormat('pt-BR', {
+      hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Sao_Paulo',
+    }).format(new Date())
 
     const due = this.preferences.getAll().filter(p => p.briefingTime === hhmm)
     if (due.length === 0) return
 
-    const briefing = new BuildMorningBriefingUseCase(this.dataService)
-
     for (const user of due) {
+      const briefing = new BuildMorningBriefingUseCase(this.dataService, user.ownerName)
       try {
         const text = await briefing.build()
         await this.send(user.phoneNumber, text)

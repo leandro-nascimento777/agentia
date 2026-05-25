@@ -48,10 +48,12 @@ export async function POST(req: Request) {
       return new Response('Too Many Requests', { status: 429 })
     }
 
-    const isValid = await validateTwilioSignature(req)
-    if (!isValid) {
-      console.warn('[financial-webhook] rejected: invalid Twilio signature')
-      return new Response('Forbidden', { status: 403 })
+    if (process.env.NODE_ENV === 'production') {
+      const isValid = await validateTwilioSignature(req)
+      if (!isValid) {
+        console.warn('[financial-webhook] rejected: invalid Twilio signature')
+        return new Response('Forbidden', { status: 403 })
+      }
     }
 
     const formData = await req.formData()

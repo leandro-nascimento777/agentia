@@ -28,10 +28,16 @@ function createContainer(): FinancialAgentContainer {
     })
   }
 
+  const supabaseUrl     = process.env.SUPABASE_URL
+  const supabaseKey     = process.env.SUPABASE_SERVICE_ROLE_KEY
+
   return new FinancialAgentContainer({
     anthropicApiKey,
     financialSecret,
     financialBaseUrl,
+    supabase: supabaseUrl && supabaseKey
+      ? { url: supabaseUrl, serviceKey: supabaseKey }
+      : undefined,
     preferences,
     twilio: twilioAccountSid && twilioAuthToken
       ? { accountSid: twilioAccountSid, authToken: twilioAuthToken, fromNumber: twilioFrom }

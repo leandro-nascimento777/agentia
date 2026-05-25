@@ -1,5 +1,5 @@
 import type { IFinancialChatPort } from '../ports/input/IFinancialChatPort'
-import type { IFinancialDataPort } from '../ports/output/IFinancialDataPort'
+import type { IFinancialDataPort, TableQueryFilter, AirReportFilter, NonAirReportFilter, CompanhiaAereaFilter, EmpresaFilter, ExecutivoFilter, BilheteFilter } from '../ports/output/IFinancialDataPort'
 import type { IAgentLLMPort, ToolExecutor } from '../ports/output/IAgentLLMPort'
 import type { IConversationHistoryPort } from '../ports/output/IConversationHistoryPort'
 import type { IUserPreferencesPort } from '../ports/output/IUserPreferencesPort'
@@ -9,7 +9,7 @@ import { FINANCIAL_WHATSAPP_PROMPT } from '../prompts'
 const SET_BRIEFING_MARKER = /\[SET_BRIEFING_TIME:(\d{2}:\d{2})\]/
 
 export class FinancialChatUseCase implements IFinancialChatPort {
-  private static readonly MAX_HISTORY_TURNS = 4
+  private static readonly MAX_HISTORY_TURNS = 8
   private static readonly MAX_TOOL_RESULT_CHARS = 3000
 
   constructor(
@@ -41,13 +41,10 @@ export class FinancialChatUseCase implements IFinancialChatPort {
     return cleaned
   }
 
-  // Detecta [SET_BRIEFING_TIME:HH:MM] na resposta, persiste a preferência e remove o marcador
   private processMarkers(reply: string): string {
     const match = reply.match(SET_BRIEFING_MARKER)
     if (match && this.phoneNumber && this.preferences) {
-      const newTime = match[1]
-      this.preferences.set(this.phoneNumber, { briefingTime: newTime })
-      console.log(`[DIMAS] horário do briefing atualizado para ${newTime} (${this.phoneNumber})`)
+      this.preferences.set(this.phoneNumber, { briefingTime: match[1] })
     }
     return reply.replace(SET_BRIEFING_MARKER, '').trim()
   }
@@ -92,20 +89,34 @@ export class FinancialChatUseCase implements IFinancialChatPort {
       case 'check_health':                      return this.dataService.checkHealth()
       case 'get_sica_tables':                   return this.dataService.getSicaTables()
       case 'get_sica_table_columns':            return this.dataService.getSicaTableColumns(p.table as string)
-      case 'query_sica_table':                  return this.dataService.querySicaTable(p.table as string, p as never)
+      case 'query_sica_table':                  return this.dataService.querySicaTable(p.table as string, p as TableQueryFilter)
       case 'get_sigot_tables':                  return this.dataService.getSigotTables()
       case 'get_sigot_table_columns':           return this.dataService.getSigotTableColumns(p.table as string)
-      case 'query_sigot_table':                 return this.dataService.querySigotTable(p.table as string, p as never)
-      case 'report_air_sica_filial':            return this.dataService.getAirReportFilial(p as never)
-      case 'report_air_sica_representante':     return this.dataService.getAirReportRepresentante(p as never)
-      case 'report_non_air_sica_filial':        return this.dataService.getNonAirSicaFilial(p as never)
-      case 'report_non_air_sica_representante': return this.dataService.getNonAirSicaRepresentante(p as never)
-      case 'report_non_air_sigot_filial':       return this.dataService.getNonAirSigotFilial(p as never)
-      case 'report_non_air_sigot_representante':return this.dataService.getNonAirSigotRepresentante(p as never)
-      case 'report_companhia_aerea':            return this.dataService.getCompanhiaAerea(p as never)
-      case 'report_empresa_cadastro':           return this.dataService.getEmpresaCadastro(p as never)
-      case 'report_executivo_gestor':           return this.dataService.getExecutivoGestor(p as never)
-      case 'report_bilhete_email_agencia':      return this.dataService.getBilheteEmailAgencia(p as never)
+      case 'query_sigot_table':                 return this.dataService.querySigotTable(p.table as string, p as TableQueryFilter)
+      case 'report_air_sica_filial':            return this.dataService.getAirReportFilial(p as AirReportFilter)
+      case 'report_air_sica_representante':     return this.dataService.getAirReportRepresentante(p as AirReportFilter)
+      case 'report_non_air_sica_filial':        return this.dataService.getNonAirSicaFilial(p as NonAirReportFilter)
+      case 'report_non_air_sica_representante': return this.dataService.getNonAirSicaRepresentante(p as NonAirReportFilter)
+      case 'report_non_air_sigot_filial':       return this.dataService.getNonAirSigotFilial(p as NonAirReportFilter)
+      case 'report_non_air_sigot_representante':return this.dataService.getNonAirSigotRepresentante(p as NonAirReportFilter)
+      case 'report_companhia_aerea':            return this.dataService.getCompanhiaAerea(p as CompanhiaAereaFilter)
+      case 'report_empresa_cadastro':           return this.dataService.getEmpresaCadastro(p as EmpresaFilter)
+      case 'report_executivo_gestor':           return this.dataService.getExecutivoGestor(p as ExecutivoFilter)
+      case 'report_bilhete_email_agencia':      return this.dataService.getBilheteEmailAgencia(p as BilheteFilter)
+
+      // ─── Dashboard reports (v1.1-C) ──────────────────────────────────────
+      case 'report_saude_bases':                return this.dataService.getSaudeBase()
+      case 'report_inadimplencia':              return this.dataService.getInadimplencia()
+      case 'report_ranking_gestores':           return this.dataService.getRankingGestores()
+      case 'report_pipeline':                   return this.dataService.getPipeline()
+      case 'report_novas_agencias':             return this.dataService.getNovasAgencias()
+      case 'report_credito_por_base':           return this.dataService.getCreditoPorBase()
+      case 'report_risco_agencias':             return this.dataService.getRiscoAgencias()
+      case 'report_ranking_cias':               return this.dataService.getRankingCias(p as { limit?: number })
+      case 'report_top_agencias':               return this.dataService.getTopAgencias(p as { limit?: number })
+      case 'report_embarques_futuros':          return this.dataService.getEmbarquesFuturos(p as { days?: number })
+      case 'report_nacional_vs_internacional':  return this.dataService.getNacionalVsInternacional()
+
       default: throw new Error(`Unknown tool: ${name}`)
     }
   }

@@ -6,12 +6,23 @@ import type {
   CompanhiaAereaFilter,
   EmpresaFilter,
   ExecutivoFilter,
-  BilheteFilter
+  BilheteFilter,
+  SaudeBaseRow,
+  InadimplenciaRow,
+  GestorRankingRow,
+  PipelineRow,
+  NovasAgenciasRow,
+  CreditoBaseRow,
+  RiscoAgenciaRow,
+  CiaRankingRow,
+  AgenciaRankingRow,
+  EmbarqueRow,
+  RotaRow
 } from '../../domain/ports/output/IFinancialDataPort'
 
 type Params = Record<string, string | number | boolean | undefined>
 
-const CALL_TIMEOUT_MS = 12000
+const CALL_TIMEOUT_MS = 10000
 
 export class FinancialAdapterHttpClient implements IFinancialDataPort {
   constructor(
@@ -69,4 +80,18 @@ export class FinancialAdapterHttpClient implements IFinancialDataPort {
   getEmpresaCadastro(f?: EmpresaFilter)            { return this.get('/api/reports/base-empresa-cadastro', f as Params) }
   getExecutivoGestor(f?: ExecutivoFilter)          { return this.get('/api/reports/base-executivo-gestor', f as Params) }
   getBilheteEmailAgencia(f?: BilheteFilter)        { return this.get('/api/reports/base-bilhete-email-agencia', f as Params) }
+
+  // ─── Novos relatórios v1.1-C ─────────────────────────────────────────────
+
+  getSaudeBase()                                   { return this.get('/api/reports/saude-bases') as Promise<SaudeBaseRow[]> }
+  getInadimplencia()                               { return this.get('/api/reports/inadimplencia') as Promise<{ total: InadimplenciaRow; top20: InadimplenciaRow[] }> }
+  getRankingGestores()                             { return this.get('/api/reports/ranking-gestores') as Promise<GestorRankingRow[]> }
+  getPipeline()                                    { return this.get('/api/reports/pipeline') as Promise<PipelineRow[]> }
+  getNovasAgencias()                               { return this.get('/api/reports/novas-agencias') as Promise<NovasAgenciasRow[]> }
+  getCreditoPorBase()                              { return this.get('/api/reports/credito-por-base') as Promise<CreditoBaseRow[]> }
+  getRiscoAgencias()                               { return this.get('/api/reports/risco-agencias') as Promise<RiscoAgenciaRow[]> }
+  getRankingCias(p?: { limit?: number })           { return this.get('/api/reports/ranking-cias', p as Params) as Promise<CiaRankingRow[]> }
+  getTopAgencias(p?: { limit?: number })           { return this.get('/api/reports/top-agencias', p as Params) as Promise<AgenciaRankingRow[]> }
+  getEmbarquesFuturos(p?: { days?: number })       { return this.get('/api/reports/embarques-futuros', p as Params) as Promise<EmbarqueRow[]> }
+  getNacionalVsInternacional()                     { return this.get('/api/reports/nacional-vs-internacional') as Promise<RotaRow[]> }
 }

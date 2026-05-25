@@ -1,22 +1,14 @@
 import { TwilioWhatsAppAdapter } from '../TwilioWhatsAppAdapter'
-import type { IAgentLLMPort } from '../../../domain/ports/output/IAgentLLMPort'
-import type { IFinancialDataPort } from '../../../domain/ports/output/IFinancialDataPort'
+import type { IFinancialChatPort } from '../../../domain/ports/input/IFinancialChatPort'
+import type { IRateLimitPort } from '../../../domain/ports/output/IRateLimitPort'
 import { InMemoryUserPreferencesRepository } from '../../secondary/InMemoryUserPreferencesRepository'
 
-function makeLLM(reply = 'resposta'): jest.Mocked<IAgentLLMPort> {
+function makeSession(reply = 'resposta'): jest.Mocked<IFinancialChatPort> {
   return { chat: jest.fn().mockResolvedValue(reply) }
 }
 
-function makeData(): jest.Mocked<IFinancialDataPort> {
-  return {
-    checkHealth: jest.fn(), getSicaTables: jest.fn(), getSicaTableColumns: jest.fn(),
-    querySicaTable: jest.fn(), getSigotTables: jest.fn(), getSigotTableColumns: jest.fn(),
-    querySigotTable: jest.fn(), getAirReportFilial: jest.fn(), getAirReportRepresentante: jest.fn(),
-    getAirReportGeral: jest.fn(), getNonAirSicaFilial: jest.fn(), getNonAirSicaRepresentante: jest.fn(),
-    getNonAirSigotFilial: jest.fn(), getNonAirSigotRepresentante: jest.fn(),
-    getCompanhiaAerea: jest.fn(), getEmpresaCadastro: jest.fn(),
-    getExecutivoGestor: jest.fn(), getBilheteEmailAgencia: jest.fn(),
-  }
+function makeRateLimiter(allow = true): jest.Mocked<IRateLimitPort> {
+  return { check: jest.fn().mockReturnValue(allow) }
 }
 
 function makeTwilioClient() {
@@ -26,14 +18,18 @@ function makeTwilioClient() {
 
 describe('TwilioWhatsAppAdapter', () => {
   let twilioClient: ReturnType<typeof makeTwilioClient>
-  let llm: jest.Mocked<IAgentLLMPort>
+  let mockSession: jest.Mocked<IFinancialChatPort>
   let adapter: TwilioWhatsAppAdapter
 
   beforeEach(() => {
     twilioClient = makeTwilioClient()
-    llm = makeLLM()
+    mockSession = makeSession()
     adapter = new TwilioWhatsAppAdapter(
-      twilioClient, '+14155238886', llm, makeData(), new InMemoryUserPreferencesRepository()
+      twilioClient,
+      '+14155238886',
+      () => mockSession,
+      new InMemoryUserPreferencesRepository(),
+      makeRateLimiter(),
     )
   })
 
@@ -57,7 +53,7 @@ describe('TwilioWhatsAppAdapter', () => {
   })
 
   it('sends the llm reply after processing', async () => {
-    llm.chat.mockResolvedValue('Aéreo: R$ 500.000')
+    mockSession.chat.mockResolvedValue('Aéreo: R$ 500.000')
 
     await adapter.handleWebhook('quanto foi o aéreo?', 'whatsapp:+5511999990002')
 
@@ -78,8 +74,8 @@ describe('TwilioWhatsAppAdapter', () => {
     expect(greetings.length).toBeGreaterThanOrEqual(2)
   })
 
-  it('sends error message when llm throws', async () => {
-    llm.chat.mockRejectedValue(new Error('falha no LLM'))
+  it('sends error message when session throws', async () => {
+    mockSession.chat.mockRejectedValue(new Error('falha no LLM'))
 
     await adapter.handleWebhook('oi', 'whatsapp:+5511999990003')
 
@@ -92,7 +88,7 @@ describe('TwilioWhatsAppAdapter', () => {
 
   it('splits messages longer than 4000 chars into multiple sends', async () => {
     const longReply = 'x'.repeat(8500)
-    llm.chat.mockResolvedValue(longReply)
+    mockSession.chat.mockResolvedValue(longReply)
 
     await adapter.handleWebhook('oi', 'whatsapp:+5511999990004')
 
@@ -101,5 +97,23 @@ describe('TwilioWhatsAppAdapter', () => {
       (c: [{ body: string }]) => c[0].body.length > 10
     )
     expect(longCalls.length).toBeGreaterThanOrEqual(3)
+  })
+
+  it('blocks request and sends limit message when rate limiter denies', async () => {
+    const blocked = new TwilioWhatsAppAdapter(
+      twilioClient,
+      '+14155238886',
+      () => mockSession,
+      new InMemoryUserPreferencesRepository(),
+      makeRateLimiter(false),
+    )
+
+    await blocked.handleWebhook('oi', 'whatsapp:+5511999990005')
+
+    expect(mockSession.chat).not.toHaveBeenCalled()
+    const allBodies = (twilioClient.messages.create as jest.Mock).mock.calls.map(
+      (c: [{ body: string }]) => c[0].body
+    )
+    expect(allBodies.some((b: string) => /limite/i.test(b))).toBe(true)
   })
 })

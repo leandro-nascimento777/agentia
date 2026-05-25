@@ -2,6 +2,7 @@ import { FinancialChatUseCase } from '../FinancialChatUseCase'
 import type { IAgentLLMPort } from '../../ports/output/IAgentLLMPort'
 import type { IFinancialDataPort } from '../../ports/output/IFinancialDataPort'
 import type { IConversationHistoryPort } from '../../ports/output/IConversationHistoryPort'
+import type { IUserPreferencesPort } from '../../ports/output/IUserPreferencesPort'
 import type { ConversationMessage } from '../../entities/ConversationMessage'
 
 function makeLLM(reply = 'resposta mock'): jest.Mocked<IAgentLLMPort> {
@@ -13,11 +14,15 @@ function makeData(): jest.Mocked<IFinancialDataPort> {
     checkHealth: jest.fn(),
     getSicaTables: jest.fn(), getSicaTableColumns: jest.fn(), querySicaTable: jest.fn(),
     getSigotTables: jest.fn(), getSigotTableColumns: jest.fn(), querySigotTable: jest.fn(),
-    getAirReportFilial: jest.fn(), getAirReportRepresentante: jest.fn(), getAirReportGeral: jest.fn(),
+    getAirReportFilial: jest.fn(), getAirReportRepresentante: jest.fn(),
     getNonAirSicaFilial: jest.fn(), getNonAirSicaRepresentante: jest.fn(),
     getNonAirSigotFilial: jest.fn(), getNonAirSigotRepresentante: jest.fn(),
     getCompanhiaAerea: jest.fn(), getEmpresaCadastro: jest.fn(),
     getExecutivoGestor: jest.fn(), getBilheteEmailAgencia: jest.fn(),
+    getSaudeBase: jest.fn(), getInadimplencia: jest.fn(), getRankingGestores: jest.fn(),
+    getPipeline: jest.fn(), getNovasAgencias: jest.fn(), getCreditoPorBase: jest.fn(),
+    getRiscoAgencias: jest.fn(), getRankingCias: jest.fn(), getTopAgencias: jest.fn(),
+    getEmbarquesFuturos: jest.fn(), getNacionalVsInternacional: jest.fn(),
   }
 }
 
@@ -30,6 +35,14 @@ function makeHistory(messages: ConversationMessage[] = []): jest.Mocked<IConvers
       const max = maxTurns * 2
       if (store.length > max) store = store.slice(store.length - max)
     }),
+  }
+}
+
+function makePreferences(): jest.Mocked<IUserPreferencesPort> {
+  return {
+    get:    jest.fn().mockReturnValue(undefined),
+    set:    jest.fn(),
+    getAll: jest.fn().mockReturnValue([]),
   }
 }
 
@@ -77,7 +90,7 @@ describe('FinancialChatUseCase', () => {
 
     await useCase.chat('qualquer coisa')
 
-    expect(history.truncate).toHaveBeenCalledWith(4)
+    expect(history.truncate).toHaveBeenCalledWith(8)
   })
 
   it('propagates errors from the llm', async () => {
@@ -108,5 +121,41 @@ describe('FinancialChatUseCase', () => {
     const today = new Date().toLocaleDateString('pt-BR')
     expect(systemPromptArg).toContain(today)
     expect(systemPromptArg).toContain('DIMAS')
+  })
+
+  describe('processMarkers', () => {
+    it('strips the SET_BRIEFING_TIME marker from the reply', async () => {
+      const llm = makeLLM('Horário atualizado! [SET_BRIEFING_TIME:09:30]')
+      const useCase = new FinancialChatUseCase(llm, makeData(), makeHistory())
+
+      const result = await useCase.chat('muda para 9h30')
+
+      expect(result).not.toContain('[SET_BRIEFING_TIME:')
+      expect(result).toContain('Horário atualizado!')
+    })
+
+    it('persists briefing time when preferences and phone are provided', async () => {
+      const prefs = makePreferences()
+      const llm = makeLLM('Ok! [SET_BRIEFING_TIME:07:00]')
+      const useCase = new FinancialChatUseCase(
+        llm, makeData(), makeHistory(), 'whatsapp:+5511999990000', prefs
+      )
+
+      await useCase.chat('muda para 7h')
+
+      expect(prefs.set).toHaveBeenCalledWith('whatsapp:+5511999990000', { briefingTime: '07:00' })
+    })
+
+    it('does not call preferences.set when reply has no marker', async () => {
+      const prefs = makePreferences()
+      const llm = makeLLM('Resposta normal sem marcador')
+      const useCase = new FinancialChatUseCase(
+        llm, makeData(), makeHistory(), 'whatsapp:+5511999990000', prefs
+      )
+
+      await useCase.chat('olá')
+
+      expect(prefs.set).not.toHaveBeenCalled()
+    })
   })
 })

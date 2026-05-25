@@ -205,5 +205,81 @@ export const FINANCIAL_TOOLS: Anthropic.Tool[] = [
       },
       required: []
     }
+  },
+
+  // ─── Novos relatórios v1.1-C ──────────────────────────────────────────────
+
+  {
+    name: 'report_saude_bases',
+    description: 'Saúde das bases: % de agências que compraram nos últimos 30 dias por base. Ordenado do pior para melhor.',
+    input_schema: { type: 'object', properties: {}, required: [] }
+  },
+  {
+    name: 'report_inadimplencia',
+    description: 'Faturas vencidas e não pagas. Retorna total geral + top 20 agências devedoras por valor.',
+    input_schema: { type: 'object', properties: {}, required: [] }
+  },
+  {
+    name: 'report_ranking_gestores',
+    description: 'Ranking de gestores de conta por volume no mês atual. Inclui agências, bilhetes, volume e inadimplência.',
+    input_schema: { type: 'object', properties: {}, required: [] }
+  },
+  {
+    name: 'report_pipeline',
+    description: 'Status do pipeline de onboarding: quantidade de cadastros em cada etapa + aprovados/reprovados no mês.',
+    input_schema: { type: 'object', properties: {}, required: [] }
+  },
+  {
+    name: 'report_novas_agencias',
+    description: 'Novos cadastros dos últimos 7 dias agrupados por dia com total.',
+    input_schema: { type: 'object', properties: {}, required: [] }
+  },
+  {
+    name: 'report_credito_por_base',
+    description: 'Exposição de crédito por base: nº de agências aprovadas, limite total aprovado e crédito utilizado.',
+    input_schema: { type: 'object', properties: {}, required: [] }
+  },
+  {
+    name: 'report_risco_agencias',
+    description: 'Agências em risco: limite aprovado > 0 e sem compra nos últimos 90 dias (ultima_compra nula ou antiga).',
+    input_schema: { type: 'object', properties: {}, required: [] }
+  },
+  {
+    name: 'report_ranking_cias',
+    description: 'Top 10 companhias aéreas por volume no mês atual. Retorna sigla, nome, bilhetes e volume.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        limit: { type: 'integer', description: 'Número de resultados (padrão: 10)' }
+      },
+      required: []
+    }
+  },
+  {
+    name: 'report_top_agencias',
+    description: 'Top 10 agências por volume no mês atual.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        limit: { type: 'integer', description: 'Número de resultados (padrão: 10)' }
+      },
+      required: []
+    }
+  },
+  {
+    name: 'report_embarques_futuros',
+    description: 'Embarques previstos para os próximos 7 dias. Retorna data, agência, cia, localizador e valor.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        days: { type: 'integer', description: 'Dias à frente (padrão: 7)' }
+      },
+      required: []
+    }
+  },
+  {
+    name: 'report_nacional_vs_internacional',
+    description: 'Proporção de rotas nacionais (DOM/N) vs internacionais (INT/I) no mês atual por bilhetes e volume.',
+    input_schema: { type: 'object', properties: {}, required: [] }
   }
 ]

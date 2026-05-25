@@ -8,7 +8,7 @@ export class ClaudeAgentAdapter implements IAgentLLMPort {
 
   constructor(
     private readonly client: Anthropic,
-    private readonly model: string = 'claude-haiku-4-5-20251001'
+    private readonly model: string = process.env.ANTHROPIC_MODEL ?? 'claude-haiku-4-5-20251001'
   ) {}
 
   async chat(

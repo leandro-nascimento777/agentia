@@ -66,7 +66,6 @@ export interface ISchemaPort {
 export interface IAirReportPort {
   getAirReportFilial(filter?: AirReportFilter): Promise<unknown>
   getAirReportRepresentante(filter?: AirReportFilter): Promise<unknown>
-  getAirReportGeral(filter?: AirReportFilter): Promise<unknown>
 }
 
 export interface INonAirReportPort {
@@ -83,6 +82,97 @@ export interface ICadastroPort {
   getBilheteEmailAgencia(filter?: BilheteFilter): Promise<unknown>
 }
 
+// ─── Tipos para os novos relatórios (v1.1-C) ──────────────────────────────
+
+export interface SaudeBaseRow {
+  base: string
+  sigla: string
+  total: number
+  vendendo: number
+  saude: number
+}
+
+export interface InadimplenciaRow {
+  agencia_nome: string
+  faturas: number
+  valor: number
+}
+
+export interface GestorRankingRow {
+  gestor: string
+  agencias: number
+  bilhetes: number
+  volume: number
+  inadimplencia: number
+}
+
+export interface PipelineRow {
+  etapa: string
+  qty: number
+}
+
+export interface NovasAgenciasRow {
+  dia: string
+  novos: number
+}
+
+export interface CreditoBaseRow {
+  base: string
+  sigla: string
+  agencias: number
+  limite: number
+  credito: number
+}
+
+export interface RiscoAgenciaRow {
+  nome_fantasia: string
+  unidade: string
+  limite_aprovado: number
+  ultima_compra: string | null
+}
+
+export interface CiaRankingRow {
+  sigla_cia: string
+  airline: string
+  bilhetes: number
+  volume: number
+}
+
+export interface AgenciaRankingRow {
+  agencia_nome: string
+  bilhetes: number
+  volume: number
+}
+
+export interface EmbarqueRow {
+  data_embarque: string
+  agencia_nome: string
+  airline: string
+  localizador: string
+  sigla_cia: string
+  valor: number
+}
+
+export interface RotaRow {
+  rota: string
+  bilhetes: number
+  volume: number
+}
+
+export interface IDashboardPort {
+  getSaudeBase(): Promise<SaudeBaseRow[]>
+  getInadimplencia(): Promise<{ total: InadimplenciaRow; top20: InadimplenciaRow[] }>
+  getRankingGestores(): Promise<GestorRankingRow[]>
+  getPipeline(): Promise<PipelineRow[]>
+  getNovasAgencias(): Promise<NovasAgenciasRow[]>
+  getCreditoPorBase(): Promise<CreditoBaseRow[]>
+  getRiscoAgencias(): Promise<RiscoAgenciaRow[]>
+  getRankingCias(params?: { limit?: number }): Promise<CiaRankingRow[]>
+  getTopAgencias(params?: { limit?: number }): Promise<AgenciaRankingRow[]>
+  getEmbarquesFuturos(params?: { days?: number }): Promise<EmbarqueRow[]>
+  getNacionalVsInternacional(): Promise<RotaRow[]>
+}
+
 // ─── Interface composta — implementada pelo adapter HTTP ───────────────────
 
 export interface IFinancialDataPort
@@ -90,4 +180,5 @@ export interface IFinancialDataPort
     ISchemaPort,
     IAirReportPort,
     INonAirReportPort,
-    ICadastroPort {}
+    ICadastroPort,
+    IDashboardPort {}
