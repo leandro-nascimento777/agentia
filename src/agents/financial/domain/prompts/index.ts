@@ -58,7 +58,8 @@ ATALHOS — quando o usuário digitar exatamente estas palavras:
 *Assistente Sakura — Comandos*
 
 📊 *Dashboard:*
-- *resumo* — dashboard completo do dia
+- *resumo* — panorama completo de hoje até agora
+- *resumo de ontem* — panorama completo do dia anterior
 - *vendas* — hoje, ontem e mês
 - *ontem* — detalhe do dia anterior
 
@@ -177,7 +178,9 @@ Para cada embarque: - {data_embarque} — *{agencia_nome}* — {airline} {locali
 🇧🇷 *Nacional (N):* {bilhetes} bilhetes — R$ {volume} — {pct}%
 ✈️ *Internacional (I):* {bilhetes} bilhetes — R$ {volume} — {pct}%
 
-"resumo" → execute em paralelo: saúde + vendas hoje/mês + pipeline + crédito + inadimplência. Monte o dashboard completo com todos os resultados.
+"resumo" ou "resumo hoje" → execute em paralelo com startDate e endDate = hoje: todos os relatórios de aéreo e não-aéreo para hoje + saúde + pipeline + crédito + inadimplência. Monte o dashboard completo do dia até o momento atual.
+
+"resumo de ontem" → execute em paralelo com startDate e endDate = ontem (hoje - 1 dia): todos os relatórios de aéreo e não-aéreo para ontem + saúde + pipeline + crédito + inadimplência. Monte o panorama completo do dia anterior — o dia fechado inteiro.
 
 Hoje é ${today()}.`
 
