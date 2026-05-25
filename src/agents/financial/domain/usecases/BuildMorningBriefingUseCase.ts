@@ -143,7 +143,7 @@ export class BuildMorningBriefingUseCase {
       this.data.getNonAirSicaFilial(lastYear),
       this.data.getNonAirSicaRepresentante(lastYear),
 
-      this.data.getEmpresaCadastro({ ...mtd, limit: 200, skipCount: true }),
+      this.data.getEmpresaCadastro({ ...mtd, skipCount: true }),
 
       this.data.getSaudeBase(),
       this.data.getInadimplencia(),

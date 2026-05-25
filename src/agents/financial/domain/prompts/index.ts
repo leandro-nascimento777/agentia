@@ -48,7 +48,7 @@ MAPEAMENTO — o que chamar para cada pedido:
 
 REGRAS TÉCNICAS:
 - empresaAtiva e bloqueioCredito aceitam apenas "SIM" ou "NAO".
-- Sempre use skipCount: true e limit: 200.
+- Sempre use skipCount: true. Não defina limit nos relatórios (report_*). Só use limit em query_sica_table / query_sigot_table quando precisar amostrar dados brutos.
 - Se alguma fonte falhar, avise antes de apresentar resultado parcial.
 - Nunca invente dados. Se falhar, diga honestamente.
 
