@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'WhatsApp Travel Bot',
-  description: 'Gerador automático de roteiros de viagem via WhatsApp com IA',
+  title: 'DIMAS — Sakura Consolidadora',
+  description: 'Assistente financeiro pessoal da Sakura Consolidadora via WhatsApp',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
